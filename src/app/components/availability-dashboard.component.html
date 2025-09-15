@@ -1,0 +1,97 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <h1>🏥 Doctor Availability Management</h1>
+    <p>📅 Efficiently manage doctor schedules and availability with our advanced system</p>
+    <div class="header-stats">
+      <div class="stat-item">
+        <span class="stat-number">{{ availabilities?.length || 0 }}</span>
+        <span class="stat-label">Active Schedules</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <h2>Search Doctor Availability</h2>
+    <div class="search-form">
+      <input 
+        type="number" 
+        [(ngModel)]="searchDoctorID" 
+        placeholder="Enter Doctor ID"
+        class="search-input">
+      <input 
+        type="date" 
+        [(ngModel)]="startDate" 
+        class="search-input">
+      <input 
+        type="date" 
+        [(ngModel)]="endDate" 
+        class="search-input">
+      <button 
+        (click)="searchAvailability()" 
+        class="btn-primary"
+        [disabled]="isLoading">
+        <span *ngIf="!isLoading">🔍 Search</span>
+        <span *ngIf="isLoading" class="loading-spinner"></span>
+        <span *ngIf="isLoading">Searching...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Message Display -->
+  <div *ngIf="message" class="message" [ngClass]="'message-' + messageType">
+    {{ message }}
+  </div>
+
+  <!-- Availability Results -->
+  <div *ngIf="availabilities && availabilities.length > 0" class="availability-section">
+    <h2>Available Schedules</h2>
+    <div class="availability-grid">
+      <div *ngFor="let availability of availabilities" class="availability-card">
+        <div class="card-header">
+          <h3>👨‍⚕️ Dr. {{ availability.doctorID }}</h3>
+          <div class="card-actions">
+            <button 
+              (click)="openUpdateModal(availability)"
+              class="btn-update">
+              ✏️ Edit
+            </button>
+            <button 
+              (click)="deleteAvailability(availability.doctorID, availability.date)"
+              class="btn-delete">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="date-info">
+            <strong>Date:</strong> {{ availability.date }}
+          </div>
+          <div class="time-slots">
+            <strong>🕰️ Available Time Slots:</strong>
+            <div class="slots-container">
+              <span *ngFor="let slot of availability.timeSlots; let i = index" 
+                    class="time-slot-badge"
+                    [style.animation-delay.ms]="i * 100">
+                ⏰ {{ slot }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Availability Form -->
+  <div class="add-section">
+    <app-add-availability-form (availabilityAdded)="onAvailabilityAdded()"></app-add-availability-form>
+  </div>
+</div>
+
+<!-- Update Availability Modal -->
+<app-update-availability-form 
+  [availability]="selectedAvailability"
+  [isVisible]="showUpdateModal"
+  (availabilityUpdated)="onAvailabilityUpdated()"
+  (closeModal)="closeUpdateModal()">
+</app-update-availability-form>
