@@ -1,1 +1,219 @@
-<p>consultation-records works!</p>
+<div class="container-fluid py-4">
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h4 class="card-title mb-0">Consultation Records Management</h4>
+    </div>
+    <div class="card-body p-4">
+
+      @if (successMessage) {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ successMessage }}
+          <button type="button" class="btn-close" (click)="clearMessages()" aria-label="Close"></button>
+        </div>
+      }
+
+      @if (errorMessage) {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          {{ errorMessage }}
+          <button type="button" class="btn-close" (click)="clearMessages()" aria-label="Close"></button>
+        </div>
+      }
+
+      <div class="mb-4">
+        <button
+          type="button"
+          class="btn btn-success"
+          (click)="toggleAddForm()"
+          [disabled]="isSubmitting">
+          <i class="bi bi-plus-circle me-2"></i>
+          {{ showAddForm ? 'Cancel' : 'Add New Consultation' }}
+        </button>
+      </div>
+
+      @if (showAddForm) {
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Add New Consultation</h5>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="consultationForm" (ngSubmit)="onSubmit()">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="patientId" class="form-label">Patient ID <span class="text-danger">*</span></label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="patientId"
+                    formControlName="patientId"
+                    [class.is-invalid]="hasError('patientId')"
+                    min="1">
+                  @if (hasError('patientId')) {
+                    <div class="invalid-feedback">
+                      {{ getErrorMessage('patientId') }}
+                    </div>
+                  }
+                </div>
+                <div class="col-md-6">
+                  <label for="appointmentId" class="form-label">Appointment ID <span class="text-danger">*</span></label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="appointmentId"
+                    formControlName="appointmentId"
+                    [class.is-invalid]="hasError('appointmentId')"
+                    min="1">
+                  @if (hasError('appointmentId')) {
+                    <div class="invalid-feedback">
+                      {{ getErrorMessage('appointmentId') }}
+                    </div>
+                  }
+                </div>
+
+                <div class="col-12">
+                  <label for="notes" class="form-label">Consultation Notes <span class="text-danger">*</span></label>
+                  <textarea
+                    class="form-control"
+                    id="notes"
+                    rows="4"
+                    formControlName="notes"
+                    [class.is-invalid]="hasError('notes')"></textarea>
+                  @if (hasError('notes')) {
+                    <div class="invalid-feedback">
+                      {{ getErrorMessage('notes') }}
+                    </div>
+                  }
+                </div>
+
+                <div class="col-12">
+                  <label for="prescription" class="form-label">Prescription <span class="text-danger">*</span></label>
+                  <textarea
+                    class="form-control"
+                    id="prescription"
+                    rows="3"
+                    formControlName="prescription"
+                    [class.is-invalid]="hasError('prescription')"></textarea>
+                  @if (hasError('prescription')) {
+                    <div class="invalid-feedback">
+                      {{ getErrorMessage('prescription') }}
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2 mt-4">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  (click)="toggleAddForm()"
+                  [disabled]="isSubmitting">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  [disabled]="consultationForm.invalid || isSubmitting">
+                  @if (isSubmitting) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Saving...
+                  } @else {
+                    Save Consultation
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">View Medical History</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-lg-6">
+              <div class="input-group">
+                <input
+                  type="number"
+                  class="form-control"
+                  id="searchPatientId"
+                  placeholder="Enter Patient ID"
+                  #patientIdInput
+                  min="1"
+                  (keyup.enter)="onSearchClick(patientIdInput.value)">
+                <button
+                  class="btn btn-info"
+                  type="button"
+                  (click)="onSearchClick(patientIdInput.value)"
+                  [disabled]="isLoading">
+                  @if (isLoading) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Loading...
+                  } @else {
+                    Search
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (selectedPatientId) {
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              Medical History for Patient ID: {{ selectedPatientId }}
+              @if (consultations.length > 0) {
+                <span class="badge bg-info ms-2">{{ consultations.length }} Record(s)</span>
+              }
+            </h5>
+          </div>
+          <div class="card-body">
+            @if (isLoading) {
+              <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading medical history...</p>
+              </div>
+            } @else {
+              @if (consultations.length === 0) {
+                <div class="text-center py-4">
+                  <p class="text-muted">No consultation records found for Patient ID {{ selectedPatientId }}.</p>
+                </div>
+              } @else {
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead>
+                      <tr>
+                        <th scope="col">Consultation ID</th>
+                        <th scope="col">Appointment ID</th>
+                        <th scope="col">Notes</th>
+                        <th scope="col">Prescription</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (consultation of consultations; track trackByConsultationId($index, consultation)) {
+                        <tr>
+                          <td>{{ consultation.consultationId }}</td>
+                          <td>{{ consultation.appointmentId }}</td>
+                          <td class="consultation-text" [title]="consultation.notes">
+                            {{ consultation.notes }}
+                          </td>
+                          <td class="consultation-text" [title]="consultation.prescription">
+                            {{ consultation.prescription }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
