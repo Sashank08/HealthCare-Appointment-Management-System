@@ -84,6 +84,10 @@ export class AvailabilityDashboardComponent implements OnInit {
     }
   }
 
+  goToConsultations() {
+    window.location.href = '/consultations';
+  }
+
   onAvailabilityAdded() {
     if (this.searchDoctorID && this.startDate && this.endDate) {
       this.searchAvailability();

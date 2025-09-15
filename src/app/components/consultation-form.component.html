@@ -1,0 +1,88 @@
+<div class="modal-overlay" (click)="close()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🩺 Schedule Consultation</h3>
+      <button class="close-btn" (click)="close()">✕</button>
+    </div>
+    
+    <form (ngSubmit)="onSubmit()" #consultationForm="ngForm">
+      <div class="form-group">
+        <label for="doctorID">👨⚕️ Doctor ID</label>
+        <input 
+          type="number" 
+          id="doctorID" 
+          name="doctorID"
+          [(ngModel)]="doctorID" 
+          readonly
+          class="form-input readonly">
+      </div>
+
+      <div class="form-group">
+        <label for="patientID">👤 Patient ID</label>
+        <input 
+          type="number" 
+          id="patientID" 
+          name="patientID"
+          [(ngModel)]="patientID" 
+          required
+          class="form-input"
+          placeholder="Enter Patient ID">
+      </div>
+
+      <div class="form-group">
+        <label for="date">📅 Date</label>
+        <input 
+          type="date" 
+          id="date" 
+          name="date"
+          [(ngModel)]="selectedDate" 
+          required
+          class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label for="timeSlot">🕰️ Time Slot</label>
+        <input 
+          type="text" 
+          id="timeSlot" 
+          name="timeSlot"
+          [(ngModel)]="selectedTimeSlot" 
+          required
+          class="form-input"
+          placeholder="e.g., 09:00 AM - 10:00 AM">
+      </div>
+
+      <div class="form-group">
+        <label for="notes">📝 Notes (Optional)</label>
+        <textarea 
+          id="notes" 
+          name="notes"
+          [(ngModel)]="notes" 
+          class="form-textarea"
+          rows="3"
+          placeholder="Add consultation notes..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button 
+          type="button" 
+          class="btn-cancel"
+          (click)="close()">
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          class="btn-primary"
+          [disabled]="isSubmitting || !doctorID || !patientID || !selectedDate || !selectedTimeSlot">
+          <span *ngIf="!isSubmitting">📋 Schedule Consultation</span>
+          <span *ngIf="isSubmitting" class="loading-spinner"></span>
+          <span *ngIf="isSubmitting">Scheduling...</span>
+        </button>
+      </div>
+    </form>
+
+    <div *ngIf="message" class="message" [ngClass]="'message-' + messageType">
+      {{ message }}
+    </div>
+  </div>
+</div>
