@@ -1,12 +1,12 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
-  templateUrl: './app.html',
+  template: '<router-outlet></router-outlet>',
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('HealthCare_Appointment_Management_System');
+  title = 'HealthCare Management System';
 }
