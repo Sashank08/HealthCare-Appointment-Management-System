@@ -1,0 +1,58 @@
+<div class="form-container">
+  <h3>📅 Add New Availability</h3>
+  
+  <form (ngSubmit)="onSubmit()" #availabilityForm="ngForm">
+    <div class="form-group">
+      <label for="doctorID">👨⚕️ Doctor ID</label>
+      <input 
+        type="number" 
+        id="doctorID" 
+        name="doctorID"
+        [(ngModel)]="doctorID" 
+        required
+        class="form-input"
+        placeholder="Enter Doctor ID">
+    </div>
+
+    <div class="form-group">
+      <label for="date">📅 Date</label>
+      <input 
+        type="date" 
+        id="date" 
+        name="date"
+        [(ngModel)]="date" 
+        required
+        class="form-input">
+    </div>
+
+    <div class="form-group">
+      <label>🕰️ Select Time Slots</label>
+      <div class="time-slots-grid">
+        <button 
+          *ngFor="let slot of availableTimeSlots" 
+          type="button"
+          class="time-slot-btn"
+          [class.selected]="isSlotSelected(slot)"
+          (click)="toggleTimeSlot(slot)">
+          {{ slot }}
+        </button>
+      </div>
+      <div *ngIf="selectedTimeSlots.length > 0" class="selected-slots">
+        <strong>✅ Selected: </strong>{{ selectedTimeSlots.length }} slot(s)
+      </div>
+    </div>
+
+    <button 
+      type="submit" 
+      class="btn-primary"
+      [disabled]="isSubmitting || !doctorID || !date || selectedTimeSlots.length === 0">
+      <span *ngIf="!isSubmitting">➕ Add Availability</span>
+      <span *ngIf="isSubmitting" class="loading-spinner"></span>
+      <span *ngIf="isSubmitting">Adding...</span>
+    </button>
+  </form>
+
+  <div *ngIf="message" class="message" [ngClass]="'message-' + messageType">
+    {{ message }}
+  </div>
+</div>

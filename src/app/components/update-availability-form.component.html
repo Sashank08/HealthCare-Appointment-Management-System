@@ -1,0 +1,71 @@
+<div *ngIf="isVisible" class="modal-overlay" (click)="close()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>✏️ Update Availability</h3>
+      <button class="close-btn" (click)="close()">✕</button>
+    </div>
+    
+    <form (ngSubmit)="onSubmit()" #updateForm="ngForm">
+      <div class="form-group">
+        <label for="doctorID">👨‍⚕️ Doctor ID</label>
+        <input 
+          type="number" 
+          id="doctorID" 
+          name="doctorID"
+          [(ngModel)]="doctorID" 
+          required
+          class="form-input"
+          placeholder="Enter Doctor ID">
+      </div>
+
+      <div class="form-group">
+        <label for="date">📅 Date</label>
+        <input 
+          type="date" 
+          id="date" 
+          name="date"
+          [(ngModel)]="date" 
+          required
+          class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label>🕰️ Select Time Slots</label>
+        <div class="time-slots-grid">
+          <button 
+            *ngFor="let slot of availableTimeSlots" 
+            type="button"
+            class="time-slot-btn"
+            [class.selected]="isSlotSelected(slot)"
+            (click)="toggleTimeSlot(slot)">
+            {{ slot }}
+          </button>
+        </div>
+        <div *ngIf="selectedTimeSlots && selectedTimeSlots.length > 0" class="selected-slots">
+          <strong>✅ Selected: </strong>{{ selectedTimeSlots.length }} slot(s)
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button 
+          type="button" 
+          class="btn-cancel"
+          (click)="close()">
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          class="btn-primary"
+          [disabled]="isSubmitting || !doctorID || !date || !selectedTimeSlots || selectedTimeSlots.length === 0">
+          <span *ngIf="!isSubmitting">💾 Update Availability</span>
+          <span *ngIf="isSubmitting" class="loading-spinner"></span>
+          <span *ngIf="isSubmitting">Updating...</span>
+        </button>
+      </div>
+    </form>
+
+    <div *ngIf="message" class="message" [ngClass]="'message-' + messageType">
+      {{ message }}
+    </div>
+  </div>
+</div>
