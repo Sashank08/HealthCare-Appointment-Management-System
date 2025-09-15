@@ -1,8 +1,27 @@
 <div class="app-container">
+  <header class="bg-primary text-white p-3 mb-4">
+    <div class="container">
+      <h1 class="h3 mb-0">
+        <i class="bi bi-hospital me-2"></i>
+        Healthcare Appointment Management
+      </h1>
+<div class="app-container">
   <nav class="navbar">
     <div class="nav-brand">
       <h1>🏥 {{ title() }}</h1>
     </div>
+  </header>
+
+  <main class="container">
+    <app-consultation-records></app-consultation-records>
+  </main>
+
+  <footer class="bg-light text-center p-3 mt-5">
+    <small class="text-muted">
+      Healthcare Appointment Management System &copy; 2025
+    </small>
+  </footer>
+</div>
     <div class="nav-links">
       <a href="#" class="nav-link active">
         <span>📅</span>
