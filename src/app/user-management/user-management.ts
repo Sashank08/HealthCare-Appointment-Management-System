@@ -99,6 +99,11 @@ export class UserManagementComponent {
     this.scrollToDoctorLogin();
   }
 
+  showEmergencyContact() {
+    this.currentView = 'emergency-contact';
+    this.scrollToEmergencyContact();
+  }
+
   doctorLogin() {
     this.clearValidationErrors('doctorLogin');
     
@@ -344,6 +349,15 @@ export class UserManagementComponent {
   scrollToAppointmentManagement() {
     setTimeout(() => {
       const element = document.getElementById('appointment-management');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  }
+
+  scrollToEmergencyContact() {
+    setTimeout(() => {
+      const element = document.getElementById('emergency-contact');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
