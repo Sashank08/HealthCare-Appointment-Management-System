@@ -1,0 +1,149 @@
+/* Professional Medical Website */
+.hero-section {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.95), rgba(25, 135, 84, 0.9)),
+                url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.hero-content h1 {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    line-height: 1.2;
+}
+
+.hero-content .lead {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.stats-card {
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card {
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.navbar {
+    backdrop-filter: blur(10px);
+    padding: 1rem 0;
+}
+
+.btn {
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-warning {
+    background: linear-gradient(45deg, #ffc107, #ff8c00);
+    border: none;
+    color: #000;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+}
+
+.btn-warning:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* CASPY Hospital Logo Styling */
+.logo-container {
+    position: relative;
+}
+
+.logo-icon {
+    position: relative;
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #ffc107, #ff8c00);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    animation: pulse 2s infinite;
+}
+
+.logo-icon .fa-heartbeat {
+    position: absolute;
+    font-size: 18px;
+    color: #fff;
+    z-index: 2;
+}
+
+.logo-icon .fa-plus-circle {
+    position: absolute;
+    font-size: 12px;
+    color: #0d6efd;
+    top: -2px;
+    right: -2px;
+    background: white;
+    border-radius: 50%;
+    z-index: 3;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.brand-caspy {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #ffc107;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 1px;
+    background: linear-gradient(45deg, #ffc107, #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.brand-hospital {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 2px;
+    margin-top: -5px;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(255, 193, 7, 0.5);
+        transform: scale(1.05);
+    }
+    100% {
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    }
+}
+
+.navbar-brand:hover .logo-icon {
+    transform: rotate(360deg);
+    transition: transform 0.8s ease;
+}
+
+.navbar-brand:hover .brand-caspy {
+    background: linear-gradient(45deg, #ff8c00, #ffc107);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.3s ease;
+}
