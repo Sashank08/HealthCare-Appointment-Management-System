@@ -24,51 +24,108 @@
 </nav>
 
 <!-- Hero Section -->
-<section id="home" class="hero-section">
-  <div class="container">
+<section id="home" class="hero-section position-relative overflow-hidden">
+  <div class="hero-bg-overlay"></div>
+  <div class="floating-elements">
+    <div class="floating-icon floating-icon-1"><i class="fas fa-heartbeat"></i></div>
+    <div class="floating-icon floating-icon-2"><i class="fas fa-stethoscope"></i></div>
+    <div class="floating-icon floating-icon-3"><i class="fas fa-user-md"></i></div>
+    <div class="floating-icon floating-icon-4"><i class="fas fa-pills"></i></div>
+  </div>
+  <div class="container position-relative">
     <div class="row align-items-center min-vh-100">
       <div class="col-lg-7">
         <div class="hero-content text-white">
-          <h1 class="display-2 fw-bold mb-4">
-            Excellence in <span class="text-warning">Healthcare</span>
+          <div class="hero-badge mb-4">
+            <span class="badge bg-warning text-dark px-4 py-2 fs-6 fw-bold">
+              <i class="fas fa-award me-2"></i>Award Winning Healthcare
+            </span>
+          </div>
+          <h1 class="display-1 fw-bold mb-4 hero-title">
+            Excellence in <span class="text-warning position-relative">
+              Healthcare
+              <div class="title-underline"></div>
+            </span>
           </h1>
-          <p class="lead fs-4 mb-5">
+          <p class="lead fs-3 mb-5 hero-subtitle">
             Leading medical center providing world-class healthcare services with 
             state-of-the-art technology and compassionate patient care.
           </p>
-          <div class="d-flex gap-4 mb-5">
-            <button class="btn btn-warning btn-lg px-5 py-3" (click)="showLogin(); scrollToLogin()">
+          <div class="d-flex flex-wrap gap-4 mb-5">
+            <button class="btn btn-warning btn-lg px-5 py-3 hero-btn" (click)="showLogin(); scrollToLogin()">
               <i class="fas fa-calendar-plus me-2"></i>Book Appointment
+              <div class="btn-shine"></div>
             </button>
-            <button class="btn btn-outline-light btn-lg px-5 py-3">
+            <button class="btn btn-outline-light btn-lg px-5 py-3 hero-btn-outline">
               <i class="fas fa-phone me-2"></i>Emergency: 102
             </button>
+          </div>
+          <div class="hero-features d-flex flex-wrap gap-4">
+            <div class="feature-item">
+              <i class="fas fa-shield-alt text-success me-2"></i>
+              <span>100% Safe & Secure</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-clock text-info me-2"></i>
+              <span>24/7 Available</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-certificate text-warning me-2"></i>
+              <span>ISO Certified</span>
+            </div>
           </div>
         </div>
       </div>
       <div class="col-lg-5">
-        <div class="stats-card bg-white p-5 rounded-4 shadow">
-          <h3 class="text-primary mb-4 fw-bold">Our Impact</h3>
-          <div class="row text-center">
+        <div class="stats-card bg-white p-5 rounded-4 shadow-lg position-relative">
+          <div class="stats-bg-pattern"></div>
+          <h3 class="text-primary mb-4 fw-bold position-relative">
+            <i class="fas fa-chart-line me-2"></i>Our Impact
+          </h3>
+          <div class="row text-center position-relative">
             <div class="col-6 mb-4">
-              <h2 class="text-success fw-bold display-6">5K+</h2>
-              <p class="text-dark mb-1 fw-semibold">Patients Cured</p>
-              <small class="text-muted">Successfully treated with 98% recovery rate</small>
+              <div class="stat-item">
+                <h2 class="text-success fw-bold display-5 counter" data-target="5000">5K+</h2>
+                <p class="text-dark mb-1 fw-semibold">Patients Cured</p>
+                <small class="text-muted">Successfully treated with 98% recovery rate</small>
+                <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+              </div>
             </div>
             <div class="col-6 mb-4">
-              <h2 class="text-info fw-bold display-6">200+</h2>
-              <p class="text-dark mb-1 fw-semibold">Expert Doctors</p>
-              <small class="text-muted">Board-certified specialists available</small>
+              <div class="stat-item">
+                <h2 class="text-info fw-bold display-5 counter" data-target="200">200+</h2>
+                <p class="text-dark mb-1 fw-semibold">Expert Doctors</p>
+                <small class="text-muted">Board-certified specialists available</small>
+                <div class="stat-icon"><i class="fas fa-user-md"></i></div>
+              </div>
             </div>
             <div class="col-6">
-              <h2 class="text-warning fw-bold display-6">15+</h2>
-              <p class="text-dark mb-1 fw-semibold">Medical Specialties</p>
-              <small class="text-muted">Comprehensive healthcare services</small>
+              <div class="stat-item">
+                <h2 class="text-warning fw-bold display-5 counter" data-target="15">15+</h2>
+                <p class="text-dark mb-1 fw-semibold">Medical Specialties</p>
+                <small class="text-muted">Comprehensive healthcare services</small>
+                <div class="stat-icon"><i class="fas fa-hospital"></i></div>
+              </div>
             </div>
             <div class="col-6">
-              <h2 class="text-danger fw-bold display-6">24/7</h2>
-              <p class="text-dark mb-1 fw-semibold">Emergency Care</p>
-              <small class="text-muted">Round-the-clock medical assistance</small>
+              <div class="stat-item">
+                <h2 class="text-danger fw-bold display-5">24/7</h2>
+                <p class="text-dark mb-1 fw-semibold">Emergency Care</p>
+                <small class="text-muted">Round-the-clock medical assistance</small>
+                <div class="stat-icon"><i class="fas fa-ambulance"></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="trust-badges mt-4 pt-4 border-top">
+            <div class="d-flex justify-content-around align-items-center">
+              <div class="trust-badge">
+                <i class="fas fa-star text-warning"></i>
+                <small class="text-muted ms-1">4.9/5 Rating</small>
+              </div>
+              <div class="trust-badge">
+                <i class="fas fa-thumbs-up text-success"></i>
+                <small class="text-muted ms-1">99% Satisfaction</small>
+              </div>
             </div>
           </div>
         </div>
@@ -891,7 +948,7 @@
       <div class="col-12">
         <div class="bg-warning text-dark p-4 rounded-4">
           <h2 class="mb-0">
-            <i class="fas fa-user-md me-3"></i>Welcome, Dr. Smith!
+            <i class="fas fa-user-md me-3"></i>Welcome, {{userName}}!
           </h2>
           <p class="mb-0 mt-2">Manage your practice at CASPY Hospital</p>
         </div>
@@ -939,6 +996,53 @@
           <i class="fas fa-sign-out-alt me-2"></i>Back to Home
         </button>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- Consultation Records Section -->
+<section id="consultation-records" class="py-5 bg-light" *ngIf="currentView === 'consultation-records'">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="display-4 fw-bold text-primary mb-4">
+        <i class="fas fa-file-medical me-3"></i>Medical History
+      </h2>
+      <p class="lead">View your consultation records and medical history</p>
+    </div>
+    
+    <div class="card shadow border-0">
+      <div class="card-body p-5">
+        <app-consultation-records></app-consultation-records>
+      </div>
+    </div>
+    
+    <div class="text-center mt-4">
+      <button class="btn btn-primary px-4" (click)="currentView = 'dashboard'; scrollToDashboard()">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Appointment Management Section -->
+<section id="appointment-management" class="py-5 bg-light" *ngIf="currentView === 'appointment-management'">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h1 class="display-3 fw-bold text-primary mb-4">
+        <i class="fas fa-calendar-check me-3 text-success"></i>Appointment Management System
+      </h1>
+      <p class="lead fs-4 text-muted">Comprehensive healthcare appointment scheduling and management</p>
+      <div class="bg-primary bg-opacity-10 p-3 rounded-4 d-inline-block">
+        <small class="text-primary fw-semibold">CASPY Hospital - Professional Medical Services</small>
+      </div>
+    </div>
+    
+    <app-appointment-scheduling></app-appointment-scheduling>
+    
+    <div class="text-center mt-5">
+      <button class="btn btn-primary px-4" (click)="currentView = 'dashboard'; scrollToDashboard()">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+      </button>
     </div>
   </div>
 </section>

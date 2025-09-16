@@ -56,6 +56,17 @@ export class AuthService {
     }
   }
 
+  extractUserNameFromToken(token: string): string | null {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('JWT payload:', payload);
+      return payload.name || payload.fullName || payload.sub || payload.userEmail || null;
+    } catch (error) {
+      console.error('Error extracting name from token:', error);
+      return null;
+    }
+  }
+
   saveToken(token: string): void {
     localStorage.setItem('authToken', token);
   }
@@ -66,5 +77,18 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('authToken');
+  }
+
+  checkUserExists(email: string): Observable<boolean> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    
+    return this.http.get<boolean>(`${this.baseUrl}/user-exists?email=${email}`, { headers }).pipe(
+      catchError(error => {
+        console.error('User check error:', error);
+        return throwError(() => new Error('Unable to verify user'));
+      })
+    );
   }
 }
