@@ -1,13 +1,16 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
-import { AuthGuard } from '../guards/auth.guard';
+import { ConsultationRecordsComponent } from '../consultation-records/consultation-records';
+import { ConsultationRecordsService } from '../services/consultation-records';
+import { AppointmentScheduling } from '../appointment-scheduling/appointment-scheduling';
 
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConsultationRecordsComponent, AppointmentScheduling],
   templateUrl: './user-management.html',
   styleUrl: './user-management.css'
 })
@@ -41,7 +44,7 @@ export class UserManagementComponent {
     }
   };
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private consultationService: ConsultationRecordsService, private router: Router) {}
   
   registrationData = {
     fullName: '',
@@ -104,13 +107,21 @@ export class UserManagementComponent {
         next: (token) => {
           this.authService.saveToken(token);
           this.userRole = this.authService.extractRoleFromToken(token);
+          this.userName = this.authService.extractUserNameFromToken(token) || 'Doctor';
           if (this.canAccessDoctorDashboard()) {
             this.currentView = 'doctor-dashboard';
             this.scrollToDoctorDashboard();
           }
         },
         error: (error) => {
-          alert('Doctor login failed: ' + error.message);
+          console.error('Doctor login error:', error);
+          if (error.status === 0) {
+            this.validationErrors.doctorLogin.email = 'Cannot connect to backend. Check if backend is running on port 8081.';
+          } else if (error.status === 401) {
+            this.validationErrors.doctorLogin.email = 'Invalid doctor credentials. Please check your email and password.';
+          } else {
+            this.validationErrors.doctorLogin.email = 'Doctor login failed: ' + (error.error?.message || 'Connection error');
+          }
         }
       });
     }
@@ -132,31 +143,15 @@ export class UserManagementComponent {
     this.clearValidationErrors('registration');
     
     if (this.validateRegistration()) {
-      // Temporary mock registration for frontend testing
-      console.log('Mock registration for:', this.registrationData);
+      const age = this.calculateAge(this.registrationData.dateOfBirth);
       
-      // Simulate successful registration
-      this.userName = this.registrationData.fullName;
-      this.registrationSuccess = true;
-      
-      // Create mock token for testing
-      const mockToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiUEFUSUVOVCIsInVzZXJFbWFpbCI6IicgKyB0aGlzLnJlZ2lzdHJhdGlvbkRhdGEuZW1haWwgKyAnIn0.mock';
-      this.authService.saveToken(mockToken);
-      
-      setTimeout(() => {
-        this.currentView = 'dashboard';
-        this.scrollToDashboard();
-      }, 2000);
-      
-      // Uncomment below when backend is ready
-      /*
       const userData = {
-        fullName: this.registrationData.fullName,
+        name: this.registrationData.fullName,
         userEmail: this.registrationData.email,
-        phoneNumber: this.registrationData.phone,
-        dateOfBirth: this.registrationData.dateOfBirth,
+        phone: parseInt(this.registrationData.phone),
+        age: age,
         password: this.registrationData.password,
-        role: 'PATIENT'
+        user_type: 'PATIENT'
       };
       
       this.authService.register(userData).subscribe({
@@ -164,17 +159,27 @@ export class UserManagementComponent {
           this.userName = this.registrationData.fullName;
           this.registrationSuccess = true;
           
+          // Auto-login after successful registration
           setTimeout(() => {
-            this.currentView = 'dashboard';
-            this.scrollToDashboard();
+            this.authService.login(this.registrationData.email, this.registrationData.password).subscribe({
+              next: (token) => {
+                this.authService.saveToken(token);
+                this.userRole = this.authService.extractRoleFromToken(token);
+                this.currentView = 'dashboard';
+                this.scrollToDashboard();
+              },
+              error: (error) => {
+                // If auto-login fails, just show login form
+                this.currentView = 'login';
+              }
+            });
           }, 2000);
         },
         error: (error) => {
           console.error('Registration error details:', error);
-          alert('Registration failed: ' + error.message);
+          this.validationErrors.registration.email = 'Registration failed: ' + (error.error?.message || error.message);
         }
       });
-      */
     }
   }
 
@@ -182,34 +187,24 @@ export class UserManagementComponent {
     this.clearValidationErrors('login');
     
     if (this.validateLogin()) {
-      // Temporary mock login for frontend testing
-      console.log('Mock login for:', this.loginData.email);
-      
-      // Create mock token
-      const mockToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiUEFUSUVOVCIsInVzZXJFbWFpbCI6IicgKyB0aGlzLmxvZ2luRGF0YS5lbWFpbCArICcifQ.mock';
-      this.authService.saveToken(mockToken);
-      this.userRole = 'PATIENT';
-      this.userName = 'Test Patient';
-      
-      this.currentView = 'dashboard';
-      this.scrollToDashboard();
-      
-      // Uncomment below when backend is ready
-      /*
       this.authService.login(this.loginData.email, this.loginData.password).subscribe({
         next: (token) => {
           this.authService.saveToken(token);
           this.userRole = this.authService.extractRoleFromToken(token);
+          this.userName = this.authService.extractUserNameFromToken(token) || 'Patient';
           if (this.canAccessPatientDashboard()) {
             this.currentView = 'dashboard';
             this.scrollToDashboard();
           }
         },
         error: (error) => {
-          alert('Login failed: ' + error.message);
+          if (error.status === 401) {
+            this.validationErrors.login.email = 'Invalid email or password. Please check your credentials.';
+          } else {
+            this.validationErrors.login.email = 'Login failed. Please try again.';
+          }
         }
       });
-      */
     }
   }
 
@@ -219,11 +214,18 @@ export class UserManagementComponent {
   }
 
   showAppointmentHistory() {
-    alert('Appointment History - Feature coming soon!');
+    this.currentView = 'appointment-management';
+    this.scrollToAppointmentManagement();
   }
 
   showMedicalHistory() {
-    alert('Medical History - Feature coming soon!');
+    this.currentView = 'consultation-records';
+    this.scrollToConsultationRecords();
+    
+    // Auto-load medical history for patient ID 1 (demo)
+    setTimeout(() => {
+      this.loadMedicalHistoryForPatient(1);
+    }, 1000);
   }
 
   logout() {
@@ -328,6 +330,36 @@ export class UserManagementComponent {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }, 100);
+  }
+  
+  scrollToConsultationRecords() {
+    setTimeout(() => {
+      const element = document.getElementById('consultation-records');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  }
+  
+  scrollToAppointmentManagement() {
+    setTimeout(() => {
+      const element = document.getElementById('appointment-management');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  }
+  
+  loadMedicalHistoryForPatient(patientId: number) {
+    console.log('Loading medical history for patient:', patientId);
+    this.consultationService.getMedicalHistory(patientId).subscribe({
+      next: (consultations) => {
+        console.log('Medical history loaded:', consultations);
+      },
+      error: (error) => {
+        console.error('Error loading medical history:', error);
+      }
+    });
   }
   
   // Validation methods
@@ -513,5 +545,18 @@ export class UserManagementComponent {
     }
     
     return true;
+  }
+  
+  calculateAge(dateOfBirth: string): number {
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
   }
 }

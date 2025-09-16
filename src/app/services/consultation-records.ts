@@ -39,7 +39,10 @@ export class ConsultationRecordsService {
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': this.authToken,
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     });
   }
 
@@ -72,8 +75,12 @@ export class ConsultationRecordsService {
   }
 
   getMedicalHistory(patientId: number, forceRefresh: boolean = false): Observable<Consultation[]> {
+    console.log('Attempting to fetch medical history for patient:', patientId);
+    console.log('Request URL:', `${this.baseUrl}/view-mh/${patientId}`);
+    
     if (!forceRefresh && this.consultationsCache.has(patientId)) {
       const cachedData = this.consultationsCache.get(patientId)!;
+      console.log('Returning cached data:', cachedData);
       return new Observable(observer => {
         observer.next(cachedData);
         observer.complete();
@@ -86,12 +93,16 @@ export class ConsultationRecordsService {
       headers: this.getAuthHeaders()
     };
     
+    console.log('Making HTTP request with headers:', options.headers);
+    
     return this.http.get<Consultation[]>(`${this.baseUrl}/view-mh/${patientId}`, options).pipe(
       tap(consultations => {
+        console.log('Received consultations:', consultations);
         this.consultationsCache.set(patientId, consultations);
         this.loadingSubject.next(false);
       }),
       catchError(error => {
+        console.error('HTTP Error:', error);
         this.loadingSubject.next(false);
         return this.handleError(error);
       })
@@ -118,7 +129,7 @@ export class ConsultationRecordsService {
       } else if (error.error && typeof error.error === 'string') {
         errorMessage = error.error;
       } else if (error.status === 0) {
-        errorMessage = 'Unable to connect to server. Please check if the backend is running on http://localhost:8080';
+        errorMessage = 'Unable to connect to server. Please check if the backend is running on http://localhost:8081';
       } else if (error.status === 404) {
         errorMessage = 'Endpoint not found. Please check your backend API endpoints.';
       } else if (error.status === 400) {
