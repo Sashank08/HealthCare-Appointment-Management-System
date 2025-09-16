@@ -6,11 +6,12 @@ import { AuthService } from '../services/auth.service';
 import { ConsultationRecordsComponent } from '../consultation-records/consultation-records';
 import { ConsultationRecordsService } from '../services/consultation-records';
 import { AppointmentScheduling } from '../appointment-scheduling/appointment-scheduling';
+import { DoctorAvailabilty } from '../doctor-availability/doctor-availabilty';
 
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConsultationRecordsComponent, AppointmentScheduling],
+  imports: [CommonModule, FormsModule, ConsultationRecordsComponent, AppointmentScheduling, DoctorAvailabilty],
   templateUrl: './user-management.html',
   styleUrl: './user-management.css'
 })
@@ -19,6 +20,10 @@ export class UserManagementComponent {
   userName = 'John Doe';
   registrationSuccess = false;
   userRole: string | null = null;
+  userEmail = '';
+  userPhone = '';
+  userAge = 0;
+  userId = 0;
   
   // Validation properties
   loginData = {
@@ -108,6 +113,14 @@ export class UserManagementComponent {
           this.authService.saveToken(token);
           this.userRole = this.authService.extractRoleFromToken(token);
           this.userName = this.authService.extractUserNameFromToken(token) || 'Doctor';
+          this.userEmail = this.doctorLoginData.email;
+          this.extractUserInfoFromToken(token);
+          
+          // Try to get user data by email if phone not available
+          if (!this.userPhone && this.userEmail) {
+            this.fetchUserDataByEmail(this.userEmail);
+          }
+          
           if (this.canAccessDoctorDashboard()) {
             this.currentView = 'doctor-dashboard';
             this.scrollToDoctorDashboard();
@@ -136,7 +149,17 @@ export class UserManagementComponent {
   }
 
   showCreateAvailability() {
-    alert('Create Availability - Feature coming soon!');
+    this.currentView = 'doctor-availability';
+    this.scrollToDoctorAvailability();
+  }
+
+  scrollToDoctorAvailability() {
+    setTimeout(() => {
+      const element = document.getElementById('doctor-availability');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   }
 
   register() {
@@ -192,6 +215,14 @@ export class UserManagementComponent {
           this.authService.saveToken(token);
           this.userRole = this.authService.extractRoleFromToken(token);
           this.userName = this.authService.extractUserNameFromToken(token) || 'Patient';
+          this.userEmail = this.loginData.email;
+          this.extractUserInfoFromToken(token);
+          
+          // Try to get user data by email if phone not available
+          if (!this.userPhone && this.userEmail) {
+            this.fetchUserDataByEmail(this.userEmail);
+          }
+          
           if (this.canAccessPatientDashboard()) {
             this.currentView = 'dashboard';
             this.scrollToDashboard();
@@ -228,10 +259,7 @@ export class UserManagementComponent {
     }, 1000);
   }
 
-  logout() {
-    this.currentView = 'login';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+
 
   scrollToLogin() {
     setTimeout(() => {
@@ -558,5 +586,58 @@ export class UserManagementComponent {
     }
     
     return age;
+  }
+
+  extractUserInfoFromToken(token: string) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      this.userId = payload.userId || payload.id || 0;
+      this.userPhone = payload.phone || '';
+      this.userAge = payload.age || 0;
+      
+      // Fetch user data by phone to get correct ID
+      if (this.userEmail) {
+        this.fetchUserDataByPhone('9888348911');
+      }
+    } catch (error) {
+      console.error('Error extracting user info from token:', error);
+    }
+  }
+
+  fetchUserDataByPhone(phone: string) {
+    this.authService.getUserByPhone(phone).subscribe({
+      next: (userData) => {
+        if (userData) {
+          this.userId = userData.id;
+          this.userName = userData.name;
+          this.userEmail = userData.userEmail;
+          this.userPhone = userData.phone?.toString();
+          this.userAge = userData.age;
+          this.userRole = userData.user_type;
+          console.log('Updated user data from phone API:', userData);
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching user data by phone:', error);
+      }
+    });
+  }
+
+  fetchUserDataByEmail(email: string) {
+    // Since we don't have a direct email endpoint, we'll try common phone patterns
+    // or use the existing user data from registration/login
+    console.log('Fetching user data for email:', email);
+  }
+
+  logout() {
+    this.authService.removeToken();
+    this.currentView = 'login';
+    this.userRole = null;
+    this.userName = 'John Doe';
+    this.userEmail = '';
+    this.userPhone = '';
+    this.userAge = 0;
+    this.userId = 0;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

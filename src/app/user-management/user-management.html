@@ -13,12 +13,55 @@
         </div>
       </div>
     </a>
-    <div class="navbar-nav ms-auto">
+    <div class="navbar-nav ms-auto d-flex align-items-center">
       <a class="nav-link px-3 fw-bold" href="#home">Home</a>
       <a class="nav-link px-3 fw-bold" href="#" (click)="scrollToServices(); $event.preventDefault()">Services</a>
       <a class="nav-link px-3 fw-bold" href="#" (click)="showAbout(); $event.preventDefault()">About</a>
       <a class="nav-link px-3 fw-bold" href="#" (click)="scrollToContact(); $event.preventDefault()">Contact</a>
-      <button class="btn btn-warning ms-3 fw-bold" (click)="showDoctorLogin()">Doctor Portal</button>
+      <button class="btn btn-warning ms-3 fw-bold" (click)="showDoctorLogin()" *ngIf="!userRole">Doctor Portal</button>
+      
+      <!-- User Info Box -->
+      <div class="user-info-box ms-3" *ngIf="userRole">
+        <div class="dropdown">
+          <button class="btn btn-outline-light dropdown-toggle user-info-btn" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-user-circle me-2"></i>
+            <span class="user-name">{{userName}}</span>
+            <span class="user-role badge ms-2" [class.bg-warning]="userRole === 'DOCTOR'" [class.bg-success]="userRole === 'PATIENT'">{{userRole}}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end user-dropdown">
+            <li class="dropdown-header">
+              <i class="fas fa-info-circle me-2"></i>User Information
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li class="px-3 py-2">
+              <small class="text-muted">Name:</small><br>
+              <strong>{{userName}}</strong>
+            </li>
+            <li class="px-3 py-2">
+              <small class="text-muted">Email:</small><br>
+              <strong>{{userEmail}}</strong>
+            </li>
+            <li class="px-3 py-2" *ngIf="userPhone">
+              <small class="text-muted">Phone:</small><br>
+              <strong>{{userPhone}}</strong>
+            </li>
+            <li class="px-3 py-2" *ngIf="userAge > 0">
+              <small class="text-muted">Age:</small><br>
+              <strong>{{userAge}} years</strong>
+            </li>
+            <li class="px-3 py-2">
+              <small class="text-muted">User ID:</small><br>
+              <strong>#{{userId}}</strong>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <button class="dropdown-item text-danger" (click)="logout()">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 </nav>
@@ -1042,6 +1085,29 @@
     <div class="text-center mt-5">
       <button class="btn btn-primary px-4" (click)="currentView = 'dashboard'; scrollToDashboard()">
         <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Doctor Availability Section -->
+<section id="doctor-availability" class="py-5 bg-light" *ngIf="currentView === 'doctor-availability'">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h1 class="display-3 fw-bold text-primary mb-4">
+        <i class="fas fa-clock me-3 text-info"></i>Doctor Availability Management
+      </h1>
+      <p class="lead fs-4 text-muted">Manage doctor schedules and availability slots</p>
+      <div class="bg-primary bg-opacity-10 p-3 rounded-4 d-inline-block">
+        <small class="text-primary fw-semibold">CASPY Hospital - Professional Medical Services</small>
+      </div>
+    </div>
+    
+    <app-doctor-availabilty></app-doctor-availabilty>
+    
+    <div class="text-center mt-5">
+      <button class="btn btn-primary px-4" (click)="currentView = 'doctor-dashboard'; scrollToDoctorDashboard()">
+        <i class="fas fa-arrow-left me-2"></i>Back to Doctor Dashboard
       </button>
     </div>
   </div>

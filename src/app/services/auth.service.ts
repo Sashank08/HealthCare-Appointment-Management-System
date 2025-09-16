@@ -79,6 +79,10 @@ export class AuthService {
     localStorage.removeItem('authToken');
   }
 
+  removeToken(): void {
+    localStorage.removeItem('authToken');
+  }
+
   checkUserExists(email: string): Observable<boolean> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
@@ -88,6 +92,20 @@ export class AuthService {
       catchError(error => {
         console.error('User check error:', error);
         return throwError(() => new Error('Unable to verify user'));
+      })
+    );
+  }
+
+  getUserByPhone(phone: string): Observable<any> {
+    const token = this.getToken();
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+    
+    return this.http.get<any>(`${this.baseUrl}/by-phone/${phone}`, { headers }).pipe(
+      catchError(error => {
+        console.error('Get user by phone error:', error);
+        return throwError(() => error);
       })
     );
   }
