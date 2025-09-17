@@ -100,12 +100,12 @@ export class AppointmentService {
     return this.http.get<Appointment>(`${this.baseUrl}/upcoming?patientId=${patientId}&date=${date}`, this.getHttpOptions());
   }
  
-  getPatientByPhone(phone: number): Observable<UserDTO> {
-    return this.http.get<UserDTO>(`${this.baseUrl}/get-patient/by-phone/${phone}`, this.getHttpOptions());
+  getDoctorsBySpecialisation(specialisation: string): Observable<UserDTO[]> {
+    return this.http.get<UserDTO[]>(`${this.baseUrl}/by-specialisation/${specialisation}`, this.getHttpOptions());
   }
- 
-  getDoctorByPhone(phone: number): Observable<UserDTO> {
-    return this.http.get<UserDTO>(`${this.baseUrl}/get-doctor/by-phone/${phone}`, this.getHttpOptions());
+
+  getAvailableSlots(doctorId: number, date: string): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/available-slots/${doctorId}/${date}`, this.getHttpOptions());
   }
 }
  

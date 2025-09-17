@@ -179,7 +179,7 @@ export class UserManagementComponent {
         phone: parseInt(this.registrationData.phone),
         age: age,
         password: this.registrationData.password,
-        user_type: 'PATIENT'
+        role: 'PATIENT'
       };
       
       this.authService.register(userData).subscribe({
