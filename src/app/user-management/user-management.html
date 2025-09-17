@@ -49,8 +49,12 @@
               <small class="text-muted">Age:</small><br>
               <strong>{{userAge}} years</strong>
             </li>
-            <li class="px-3 py-2">
-              <small class="text-muted">User ID:</small><br>
+            <li class="px-3 py-2" *ngIf="userRole === 'PATIENT'">
+              <small class="text-muted">Patient ID:</small><br>
+              <strong>#{{userId}}</strong>
+            </li>
+            <li class="px-3 py-2" *ngIf="userRole === 'DOCTOR' || userRole === 'ADMIN'">
+              <small class="text-muted">Doctor ID:</small><br>
               <strong>#{{userId}}</strong>
             </li>
             <li><hr class="dropdown-divider"></li>
@@ -80,41 +84,41 @@
       <div class="col-lg-7">
         <div class="hero-content text-white">
           <div class="hero-badge mb-4">
-            <span class="badge bg-warning text-dark px-4 py-2 fs-6 fw-bold">
-              <i class="fas fa-award me-2"></i>Award Winning Healthcare
+            <span class="badge bg-light text-primary px-4 py-2 fs-6 fw-bold">
+              <i class="fas fa-certificate me-2"></i>JCI Accredited Medical Center
             </span>
           </div>
-          <h1 class="display-1 fw-bold mb-4 hero-title">
-            Excellence in <span class="text-warning position-relative">
-              Healthcare
+          <h1 class="display-2 fw-bold mb-4 hero-title">
+            Advanced <span class="text-light position-relative">
+              Medical Care
               <div class="title-underline"></div>
             </span>
           </h1>
           <p class="lead fs-3 mb-5 hero-subtitle">
-            Leading medical center providing world-class healthcare services with 
-            state-of-the-art technology and compassionate patient care.
+            World-class healthcare facility delivering exceptional patient outcomes through 
+            cutting-edge medical technology and evidence-based treatment protocols.
           </p>
           <div class="d-flex flex-wrap gap-4 mb-5">
-            <button class="btn btn-warning btn-lg px-5 py-3 hero-btn" (click)="showLogin(); scrollToLogin()">
-              <i class="fas fa-calendar-plus me-2"></i>Book Appointment
+            <button class="btn btn-light btn-lg px-5 py-3 hero-btn text-primary fw-bold" (click)="showLogin(); scrollToLogin()">
+              <i class="fas fa-calendar-plus me-2"></i>Schedule Consultation
               <div class="btn-shine"></div>
             </button>
             <button class="btn btn-outline-light btn-lg px-5 py-3 hero-btn-outline" (click)="showEmergencyContact()">
-              <i class="fas fa-phone me-2"></i>Emergency: 102
+              <i class="fas fa-ambulance me-2"></i>Emergency Services
             </button>
           </div>
           <div class="hero-features d-flex flex-wrap gap-4">
             <div class="feature-item">
-              <i class="fas fa-shield-alt text-success me-2"></i>
-              <span>100% Safe & Secure</span>
+              <i class="fas fa-user-md text-light me-2"></i>
+              <span>Board-Certified Physicians</span>
             </div>
             <div class="feature-item">
-              <i class="fas fa-clock text-info me-2"></i>
-              <span>24/7 Available</span>
+              <i class="fas fa-hospital text-light me-2"></i>
+              <span>State-of-the-Art Facilities</span>
             </div>
             <div class="feature-item">
-              <i class="fas fa-certificate text-warning me-2"></i>
-              <span>ISO Certified</span>
+              <i class="fas fa-heartbeat text-light me-2"></i>
+              <span>Patient-Centered Care</span>
             </div>
           </div>
         </div>
@@ -208,11 +212,16 @@
                 </div>
                 <div class="mb-4">
                   <label class="form-label">Password</label>
-                  <input type="password" class="form-control form-control-lg" 
-                         [(ngModel)]="loginData.password" 
-                         name="loginPassword" 
-                         [class.is-invalid]="validationErrors.login.password"
-                         required>
+                  <div class="input-group">
+                    <input [type]="showLoginPassword ? 'text' : 'password'" class="form-control form-control-lg" 
+                           [(ngModel)]="loginData.password" 
+                           name="loginPassword" 
+                           [class.is-invalid]="validationErrors.login.password"
+                           required>
+                    <button class="btn btn-outline-secondary" type="button" (click)="showLoginPassword = !showLoginPassword">
+                      <i class="fas" [class.fa-eye]="!showLoginPassword" [class.fa-eye-slash]="showLoginPassword"></i>
+                    </button>
+                  </div>
                   <div class="invalid-feedback" *ngIf="validationErrors.login.password">
                     {{validationErrors.login.password}}
                   </div>
@@ -379,21 +388,21 @@
                   <div class="row">
                     <div class="col-6">
                       <small class="text-muted">Blood Pressure:</small>
-                      <div class="fw-semibold text-success">120/80 mmHg</div>
+                      <div class="fw-semibold text-success">{{patientHealthSummary.vitalSigns?.bloodPressure || 'Not Available'}}</div>
                     </div>
                     <div class="col-6">
                       <small class="text-muted">Heart Rate:</small>
-                      <div class="fw-semibold text-success">72 bpm</div>
+                      <div class="fw-semibold text-success">{{patientHealthSummary.vitalSigns?.heartRate || 'Not Available'}}</div>
                     </div>
                   </div>
                   <div class="row mt-2">
                     <div class="col-6">
                       <small class="text-muted">Temperature:</small>
-                      <div class="fw-semibold text-success">98.6°F</div>
+                      <div class="fw-semibold text-success">{{patientHealthSummary.vitalSigns?.temperature || 'Not Available'}}</div>
                     </div>
                     <div class="col-6">
                       <small class="text-muted">Weight:</small>
-                      <div class="fw-semibold">70 kg</div>
+                      <div class="fw-semibold">{{patientHealthSummary.vitalSigns?.weight || 'Not Available'}}</div>
                     </div>
                   </div>
                 </div>
@@ -401,20 +410,20 @@
               <div class="col-md-6">
                 <div class="border rounded p-3">
                   <h6 class="mb-2">Current Medications</h6>
-                  <div class="mb-2">
-                    <div class="d-flex justify-content-between">
-                      <span class="fw-semibold">Lisinopril 10mg</span>
-                      <small class="text-muted">Daily</small>
+                  <div *ngIf="patientHealthSummary.currentMedications.length > 0; else noMedications">
+                    <div class="mb-2" *ngFor="let medication of patientHealthSummary.currentMedications">
+                      <div class="d-flex justify-content-between">
+                        <span class="fw-semibold">{{medication}}</span>
+                        <small class="text-muted">As prescribed</small>
+                      </div>
+                      <small class="text-muted">From last consultation</small>
                     </div>
-                    <small class="text-muted">For blood pressure</small>
                   </div>
-                  <div class="mb-2">
-                    <div class="d-flex justify-content-between">
-                      <span class="fw-semibold">Vitamin D3</span>
-                      <small class="text-muted">Weekly</small>
+                  <ng-template #noMedications>
+                    <div class="text-muted">
+                      <small>No current medications on record</small>
                     </div>
-                    <small class="text-muted">Supplement</small>
-                  </div>
+                  </ng-template>
                 </div>
               </div>
             </div>
@@ -428,16 +437,16 @@
           </div>
           <div class="card-body">
             <div class="d-grid gap-2">
-              <button class="btn btn-outline-primary btn-sm">
+              <button class="btn btn-outline-primary btn-sm" (click)="downloadReports()">
                 <i class="fas fa-download me-2"></i>Download Reports
               </button>
-              <button class="btn btn-outline-success btn-sm">
+              <button class="btn btn-outline-success btn-sm" (click)="showAppointmentHistory()">
                 <i class="fas fa-calendar-plus me-2"></i>Book Appointment
               </button>
-              <button class="btn btn-outline-info btn-sm">
+              <button class="btn btn-outline-info btn-sm" (click)="contactDoctor()">
                 <i class="fas fa-phone me-2"></i>Contact Doctor
               </button>
-              <button class="btn btn-outline-warning btn-sm">
+              <button class="btn btn-outline-warning btn-sm" (click)="refillPrescription()">
                 <i class="fas fa-pills me-2"></i>Refill Prescription
               </button>
             </div>
@@ -1080,12 +1089,17 @@
               </div>
               <div class="mb-4">
                 <label class="form-label">Password <span class="text-danger">*</span></label>
-                <input type="password" class="form-control form-control-lg" 
-                       [(ngModel)]="doctorLoginData.password" 
-                       name="doctorPassword" 
-                       [class.is-invalid]="validationErrors.doctorLogin.password"
-                       placeholder="Enter your password"
-                       required>
+                <div class="input-group">
+                  <input [type]="showDoctorPassword ? 'text' : 'password'" class="form-control form-control-lg" 
+                         [(ngModel)]="doctorLoginData.password" 
+                         name="doctorPassword" 
+                         [class.is-invalid]="validationErrors.doctorLogin.password"
+                         placeholder="Enter your password"
+                         required>
+                  <button class="btn btn-outline-secondary" type="button" (click)="showDoctorPassword = !showDoctorPassword">
+                    <i class="fas" [class.fa-eye]="!showDoctorPassword" [class.fa-eye-slash]="showDoctorPassword"></i>
+                  </button>
+                </div>
                 <div class="invalid-feedback" *ngIf="validationErrors.doctorLogin.password">
                   {{validationErrors.doctorLogin.password}}
                 </div>
@@ -1130,7 +1144,7 @@
                 <i class="fas fa-users fa-2x text-primary"></i>
               </div>
             </div>
-            <h4 class="mb-1">127</h4>
+            <h4 class="mb-1">{{doctorStats.totalPatients || 0}}</h4>
             <small class="text-muted">Total Patients</small>
           </div>
         </div>
@@ -1143,7 +1157,7 @@
                 <i class="fas fa-calendar-check fa-2x text-success"></i>
               </div>
             </div>
-            <h4 class="mb-1">8</h4>
+            <h4 class="mb-1">{{doctorStats.todayAppointments || 0}}</h4>
             <small class="text-muted">Today's Appointments</small>
           </div>
         </div>
@@ -1156,7 +1170,7 @@
                 <i class="fas fa-file-medical fa-2x text-info"></i>
               </div>
             </div>
-            <h4 class="mb-1">23</h4>
+            <h4 class="mb-1">{{doctorStats.weeklyConsultations || 0}}</h4>
             <small class="text-muted">Consultations This Week</small>
           </div>
         </div>
@@ -1169,7 +1183,7 @@
                 <i class="fas fa-star fa-2x text-warning"></i>
               </div>
             </div>
-            <h4 class="mb-1">4.8</h4>
+            <h4 class="mb-1">{{doctorStats.rating || 'N/A'}}</h4>
             <small class="text-muted">Patient Rating</small>
           </div>
         </div>
@@ -1184,53 +1198,34 @@
             <h5 class="mb-0">Today's Schedule - December 16, 2024</h5>
           </div>
           <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-4">
+            <div class="row g-3" *ngIf="todaysSchedule.length > 0; else noAppointments">
+              <div class="col-md-4" *ngFor="let appointment of todaysSchedule.slice(0, 3)">
                 <div class="border rounded p-3">
                   <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                      <h6 class="mb-1">Sarah Johnson</h6>
-                      <small class="text-muted">Follow-up Consultation</small>
+                      <h6 class="mb-1">{{appointment.patientName}}</h6>
+                      <small class="text-muted">Appointment #{{appointment.id}}</small>
                     </div>
-                    <span class="badge bg-success">Completed</span>
+                    <span class="badge" 
+                          [class.bg-success]="appointment.status === 'Completed'"
+                          [class.bg-primary]="appointment.status === 'In Progress'"
+                          [class.bg-warning]="appointment.status === 'Upcoming'">
+                      {{appointment.status}}
+                    </span>
                   </div>
                   <div class="d-flex align-items-center text-muted">
                     <i class="fas fa-clock me-2"></i>
-                    <small>9:00 AM - 9:30 AM</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="border rounded p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <h6 class="mb-1">Michael Chen</h6>
-                      <small class="text-muted">Regular Checkup</small>
-                    </div>
-                    <span class="badge bg-primary">In Progress</span>
-                  </div>
-                  <div class="d-flex align-items-center text-muted">
-                    <i class="fas fa-clock me-2"></i>
-                    <small>10:00 AM - 10:30 AM</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="border rounded p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <h6 class="mb-1">Emily Rodriguez</h6>
-                      <small class="text-muted">New Patient</small>
-                    </div>
-                    <span class="badge bg-warning">Upcoming</span>
-                  </div>
-                  <div class="d-flex align-items-center text-muted">
-                    <i class="fas fa-clock me-2"></i>
-                    <small>11:00 AM - 11:30 AM</small>
+                    <small>{{appointment.slot}}</small>
                   </div>
                 </div>
               </div>
             </div>
+            <ng-template #noAppointments>
+              <div class="text-center text-muted py-4">
+                <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                <p class="mb-0">No appointments scheduled for today</p>
+              </div>
+            </ng-template>
           </div>
         </div>
       </div>
@@ -1247,19 +1242,31 @@
                 <div class="row">
                   <div class="col-sm-6 mb-2">
                     <small class="text-muted">Doctor ID:</small>
-                    <div class="fw-semibold">DOC-001</div>
+                    <div class="fw-semibold">#{{userId || 'DOC-001'}}</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <small class="text-muted">Email:</small>
+                    <div class="fw-semibold">{{userEmail || 'Not Available'}}</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <small class="text-muted">Phone:</small>
+                    <div class="fw-semibold">{{userPhone || 'Not Available'}}</div>
                   </div>
                   <div class="col-sm-6 mb-2">
                     <small class="text-muted">Specialization:</small>
-                    <div class="fw-semibold">Cardiology</div>
+                    <div class="fw-semibold">{{doctorProfile.specialization || 'General Medicine'}}</div>
                   </div>
                   <div class="col-sm-6 mb-2">
                     <small class="text-muted">Experience:</small>
-                    <div class="fw-semibold">15+ Years</div>
+                    <div class="fw-semibold">{{doctorProfile.experience || '5+ years'}}</div>
                   </div>
                   <div class="col-sm-6 mb-2">
-                    <small class="text-muted">Department:</small>
-                    <div class="fw-semibold">Cardiac Care Unit</div>
+                    <small class="text-muted">Qualification:</small>
+                    <div class="fw-semibold">{{doctorProfile.qualification || 'MBBS, MD'}}</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <small class="text-muted">Role:</small>
+                    <div class="fw-semibold">{{userRole || 'DOCTOR'}}</div>
                   </div>
                 </div>
               </div>
@@ -1268,7 +1275,7 @@
                   <i class="fas fa-user-md fa-2x text-primary"></i>
                 </div>
                 <div class="mt-2">
-                  <span class="badge" style="background: linear-gradient(45deg, #059669, #047857); color: white;">Senior Consultant</span>
+                  <span class="badge" style="background: linear-gradient(45deg, #059669, #047857); color: white;">{{userRole === 'ADMIN' ? 'Administrator' : 'Medical Professional'}}</span>
                 </div>
               </div>
             </div>
@@ -1578,28 +1585,149 @@
   </div>
 </section>
 
-<!-- Contact Section -->
-<section id="contact" class="py-5 bg-primary text-white">
-  <div class="container">
-    <div class="text-center">
-      <h2 class="display-4 fw-bold mb-4">Contact Us</h2>
-      <div class="row">
-        <div class="col-md-4">
-          <i class="fas fa-phone fa-3x text-warning mb-3"></i>
-          <h5>Call Us</h5>
-          <p>+91 8770645952</p>
+<!-- Professional Footer -->
+<footer id="contact" class="bg-dark text-white">
+  <!-- Main Footer Content -->
+  <div class="py-5">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Hospital Information -->
+        <div class="col-lg-4 col-md-6">
+          <div class="mb-4">
+            <div class="logo-container d-flex align-items-center mb-3">
+              <div class="logo-icon me-2">
+                <i class="fas fa-heartbeat text-danger"></i>
+                <i class="fas fa-plus-circle text-success"></i>
+              </div>
+              <div class="logo-text">
+                <span class="brand-caspy fs-4 fw-bold text-primary">CASPY</span>
+                <span class="brand-hospital fs-4 fw-bold text-light">Hospital</span>
+              </div>
+            </div>
+            <p class="text-light mb-3">Leading healthcare provider committed to delivering exceptional medical care with compassion, innovation, and excellence.</p>
+            <div class="d-flex gap-3">
+              <a href="#" class="text-light hover-primary"><i class="fab fa-facebook-f fa-lg"></i></a>
+              <a href="#" class="text-light hover-primary"><i class="fab fa-twitter fa-lg"></i></a>
+              <a href="#" class="text-light hover-primary"><i class="fab fa-linkedin-in fa-lg"></i></a>
+              <a href="#" class="text-light hover-primary"><i class="fab fa-instagram fa-lg"></i></a>
+            </div>
+          </div>
         </div>
-        <div class="col-md-4">
-          <i class="fas fa-envelope fa-3x text-warning mb-3"></i>
-          <h5>Email Us</h5>
-          <p>hospitalserviceisg2025@gmail.com</p>
+
+        <!-- Quick Links -->
+        <div class="col-lg-2 col-md-6">
+          <h5 class="text-primary mb-3">Quick Links</h5>
+          <ul class="list-unstyled">
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showHome(); $event.preventDefault()">Home</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showAbout(); $event.preventDefault()">About Us</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="scrollToServices(); $event.preventDefault()">Services</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showDoctorLogin(); $event.preventDefault()">Doctor Portal</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showEmergencyContact(); $event.preventDefault()">Emergency</a></li>
+          </ul>
         </div>
-        <div class="col-md-4">
-          <i class="fas fa-map-marker-alt fa-3x text-warning mb-3"></i>
-          <h5>Visit Us</h5>
-          <p>123 Medical Center, CASPY Hospital, Mumbai, India</p>
+
+        <!-- Medical Services -->
+        <div class="col-lg-2 col-md-6">
+          <h5 class="text-primary mb-3">Medical Services</h5>
+          <ul class="list-unstyled">
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showCardiology(); $event.preventDefault()">Cardiology</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showNeurology(); $event.preventDefault()">Neurology</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showOrthopedics(); $event.preventDefault()">Orthopedics</a></li>
+            <li class="mb-2"><a href="#" class="text-light text-decoration-none hover-primary" (click)="showPediatrics(); $event.preventDefault()">Pediatrics</a></li>
+          </ul>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="col-lg-4 col-md-6">
+          <h5 class="text-primary mb-3">Contact Information</h5>
+          <div class="contact-info">
+            <div class="d-flex align-items-start mb-3">
+              <i class="fas fa-map-marker-alt text-primary me-3 mt-1"></i>
+              <div>
+                <strong>Address:</strong><br>
+                <span class="text-light">123 Medical Center Drive<br>Mumbai, Maharashtra 400001<br>India</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center mb-3">
+              <i class="fas fa-phone text-primary me-3"></i>
+              <div>
+                <strong>Phone:</strong><br>
+                <a href="tel:+918770645952" class="text-light text-decoration-none hover-primary">+91 8770645952</a>
+              </div>
+            </div>
+            <div class="d-flex align-items-center mb-3">
+              <i class="fas fa-envelope text-primary me-3"></i>
+              <div>
+                <strong>Email:</strong><br>
+                <a href="mailto:hospitalserviceisg2025@gmail.com" class="text-light text-decoration-none hover-primary">hospitalserviceisg2025@gmail.com</a>
+              </div>
+            </div>
+            <div class="d-flex align-items-center mb-3">
+              <i class="fas fa-ambulance text-danger me-3"></i>
+              <div>
+                <strong>Emergency:</strong><br>
+                <a href="tel:102" class="text-danger text-decoration-none fw-bold">102 (24/7)</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hospital Stats -->
+      <div class="row mt-5 pt-4 border-top border-secondary">
+        <div class="col-12">
+          <div class="row text-center">
+            <div class="col-md-3 col-6 mb-3">
+              <div class="stat-item">
+                <h3 class="text-primary fw-bold mb-1">5000+</h3>
+                <small class="text-light">Patients Treated</small>
+              </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+              <div class="stat-item">
+                <h3 class="text-success fw-bold mb-1">200+</h3>
+                <small class="text-light">Expert Doctors</small>
+              </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+              <div class="stat-item">
+                <h3 class="text-warning fw-bold mb-1">15+</h3>
+                <small class="text-light">Medical Specialties</small>
+              </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+              <div class="stat-item">
+                <h3 class="text-info fw-bold mb-1">24/7</h3>
+                <small class="text-light">Emergency Care</small>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</section>
+
+  <!-- Bottom Footer -->
+  <div class="bg-black py-3">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <p class="mb-0 text-light">
+            <small>&copy; 2024 CASPY Hospital. All rights reserved. | 
+            <a href="#" class="text-primary text-decoration-none">Privacy Policy</a> | 
+            <a href="#" class="text-primary text-decoration-none">Terms of Service</a> | 
+            <a href="#" class="text-primary text-decoration-none">Patient Rights</a></small>
+          </p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <div class="d-flex justify-content-md-end justify-content-start align-items-center gap-3">
+            <small class="text-light">Accredited by:</small>
+            <span class="badge bg-success">NABH</span>
+            <span class="badge bg-primary">ISO 9001:2015</span>
+            <span class="badge bg-warning text-dark">JCI</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

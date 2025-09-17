@@ -16,15 +16,22 @@ export class AuthService {
     });
     
     const loginData = { userEmail: email, password: password };
-    console.log('Login request:', loginData);
+    console.log('Login request to:', `${this.baseUrl}/login`);
+    console.log('Login data:', loginData);
     
     return this.http.post(`${this.baseUrl}/login`, loginData, { 
       headers, 
       responseType: 'text' 
     }).pipe(
       catchError(error => {
-        console.error('Login error:', error);
-        return throwError(() => new Error(error.error || 'Login failed'));
+        console.error('Login error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          message: error.message,
+          url: error.url
+        });
+        return throwError(() => error);
       })
     );
   }
@@ -34,15 +41,31 @@ export class AuthService {
       'Content-Type': 'application/json'
     });
     
-    console.log('Register request:', userData);
+    console.log('Register request to:', `${this.baseUrl}/register`);
+    console.log('Register data:', userData);
     
     return this.http.post(`${this.baseUrl}/register`, userData, { 
       headers, 
       responseType: 'text' 
     }).pipe(
       catchError(error => {
-        console.error('Registration error:', error);
-        return throwError(() => new Error(error.error || 'Registration failed'));
+        console.error('Registration error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          message: error.message,
+          url: error.url
+        });
+        
+        if (error.status === 0) {
+          return throwError(() => new Error('Cannot connect to backend. Please check if the backend server is running on port 8081.'));
+        } else if (error.status === 500) {
+          return throwError(() => new Error('Server error. Please check backend logs.'));
+        } else if (error.status === 400) {
+          return throwError(() => new Error('Invalid registration data. Please check all fields.'));
+        } else {
+          return throwError(() => new Error(error.error || error.message || 'Registration failed'));
+        }
       })
     );
   }
@@ -60,9 +83,40 @@ export class AuthService {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       console.log('JWT payload:', payload);
-      return payload.name || payload.fullName || payload.sub || payload.userEmail || null;
+      return payload.name || payload.fullName || payload.username || null;
     } catch (error) {
       console.error('Error extracting name from token:', error);
+      return null;
+    }
+  }
+
+  extractUserIdFromToken(token: string): number | null {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('JWT payload for ID extraction:', payload);
+      
+      // Try to get numeric ID from various possible fields
+      const id = payload.userId || payload.id || payload.user_id;
+      
+      // Convert to number if it's a string
+      if (id !== null && id !== undefined) {
+        const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+        return isNaN(numericId) ? null : numericId;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting user ID from token:', error);
+      return null;
+    }
+  }
+
+  extractUserEmailFromToken(token: string): string | null {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userEmail || payload.email || payload.sub || null;
+    } catch (error) {
+      console.error('Error extracting user email from token:', error);
       return null;
     }
   }
