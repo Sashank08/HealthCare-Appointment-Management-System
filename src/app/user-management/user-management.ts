@@ -172,6 +172,7 @@ export class UserManagementComponent implements OnInit {
           
           if (this.canAccessDoctorDashboard()) {
             this.loadDoctorStats();
+            this.loadDoctorProfile(); // Ensure doctor profile is loaded
             this.currentView = 'doctor-dashboard';
             this.scrollToDoctorDashboard();
           }
@@ -686,9 +687,11 @@ export class UserManagementComponent implements OnInit {
       this.userPhone = payload.phone || '';
       this.userAge = payload.age || 0;
       
-      // Generate patient ID from email
-      if (this.userEmail) {
+      // Only generate patient ID for patients, not doctors
+      if (this.userRole === 'PATIENT' && this.userEmail) {
         this.userId = this.generatePatientId(this.userEmail);
+      } else if (this.userRole === 'DOCTOR') {
+        this.userId = 0; // Will be set from backend
       }
       
       console.log('Extracted user info - ID:', this.userId, 'Email:', this.userEmail, 'Phone:', this.userPhone, 'Age:', this.userAge);
@@ -809,28 +812,27 @@ export class UserManagementComponent implements OnInit {
 
   loadDoctorProfile() {
     const phoneToSearch = this.userPhone || '9888348912';
+    console.log('Loading doctor profile for phone:', phoneToSearch);
     
-    this.appointmentService.getDoctorByPhone(parseInt(phoneToSearch)).subscribe({
+    this.authService.getUserByPhone(phoneToSearch).subscribe({
       next: (doctor) => {
         // Update user info with real database data
-        if (doctor.name) {
-          this.userName = doctor.name;
-        }
-        if (doctor.email) {
-          this.userEmail = doctor.email;
-        }
-        if (doctor.phone) {
-          this.userPhone = doctor.phone.toString();
-        }
+        this.userName = doctor.name || this.userName;
+        this.userEmail = doctor.userEmail || this.userEmail;
+        this.userPhone = doctor.phone ? doctor.phone.toString() : this.userPhone;
+        this.userId = doctor.id || this.userId;
+        this.userAge = doctor.age || this.userAge;
         
-        // Set doctor profile (use specialisation from backend if available)
+        // Set doctor profile with real specialisation from backend
         this.doctorProfile = {
-          specialization: (doctor as any).specialisation || 'Cardiology',
+          specialization: (doctor as any).specialisation || 'General Medicine',
           experience: '5+ years',
           qualification: 'MBBS, MD'
         };
         
-        console.log('Doctor profile loaded:', doctor);
+        console.log('Doctor profile loaded from auth service:', doctor);
+        console.log('Updated userId to:', this.userId);
+        console.log('Updated userName to:', this.userName);
       },
       error: (error) => {
         console.error('Error loading doctor profile:', error);
