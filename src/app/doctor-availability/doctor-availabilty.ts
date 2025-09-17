@@ -8,6 +8,18 @@ export interface Availability {
   doctorID: number;
   date: string;
   timeSlots: string[];
+  doctorName?: string;
+  specialty?: string;
+}
+
+export interface Appointment {
+  id: number;
+  doctorId: number;
+  patientId: number;
+  date: string;
+  slot: string;
+  status?: string;
+  patientName?: string;
 }
  
 @Injectable({
@@ -41,6 +53,12 @@ export class AvailabilityService {
     const headers = { 'Authorization': `Bearer ${token}` };
     return this.http.delete<void>(`${this.baseUrl}/${doctorID}/${date}`, { headers });
   }
+
+  getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.get<Appointment[]>(`http://localhost:8081/appointments/doctor/${doctorId}`, { headers });
+  }
 }
  
 @Component({
@@ -56,9 +74,11 @@ export class DoctorAvailabilty {
   startDate = '';
   endDate = '';
   availabilities: Availability[] = [];
+  appointments: Appointment[] = [];
   isLoading = false;
   message = '';
   messageType: 'success' | 'error' | 'warning' | '' = '';
+  showAppointments = false;
  
   // Add form properties
   doctorID: number | null = null;
@@ -67,6 +87,8 @@ export class DoctorAvailabilty {
   availableTimeSlots = this.generateTimeSlots();
   isSubmitting = false;
   showAddForm = false;
+  doctorName = '';
+  specialty = '';
  
   // Update form properties
   selectedAvailability: Availability | null = null;
@@ -83,6 +105,62 @@ export class DoctorAvailabilty {
     this.currentUserId = 1;
     this.initializeUserRole();
     this.fetchCorrectUserId();
+    
+    setTimeout(() => {
+      this.loadAppointments();
+    }, 1000);
+  }
+
+  loadAppointments() {
+    if (this.currentUserId) {
+      this.availabilityService.getAppointmentsByDoctor(this.currentUserId).subscribe({
+        next: (appointments) => {
+          this.appointments = appointments.map(apt => ({
+            ...apt,
+            patientName: `Patient #${apt.patientId}`,
+            status: this.getAppointmentStatus(apt.slot)
+          }));
+          console.log('Loaded appointments:', this.appointments);
+        },
+        error: (error) => {
+          console.error('Error loading appointments:', error);
+        }
+      });
+    }
+  }
+
+  getAppointmentStatus(slot: string): string {
+    const now = new Date();
+    const currentTime = now.getHours() * 100 + now.getMinutes();
+    const slotTime = parseInt(slot.replace(':', ''));
+    
+    if (slotTime < currentTime - 100) {
+      return 'Completed';
+    } else if (slotTime <= currentTime + 30) {
+      return 'In Progress';
+    } else {
+      return 'Upcoming';
+    }
+  }
+
+  toggleAppointmentsView() {
+    this.showAppointments = !this.showAppointments;
+    if (this.showAppointments) {
+      this.loadAppointments();
+    }
+  }
+
+  getAppointmentsByDate(date: string): Appointment[] {
+    return this.appointments.filter(apt => apt.date === date);
+  }
+
+  getStatusColor(status: string): string {
+    switch (status) {
+      case 'Completed': return '#4CAF50';
+      case 'In Progress': return '#FF9800';
+      case 'Upcoming': return '#2196F3';
+      default: return '#666';
+    }
   }
 
   private fetchCorrectUserId() {
@@ -90,15 +168,44 @@ export class DoctorAvailabilty {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        this.currentUserId = payload.userId || payload.id || 1;
-        this.doctorID = this.currentUserId;
-        this.searchDoctorID = this.currentUserId;
-        console.log('User ID from token:', this.currentUserId);
+        const phoneNumber = payload.phone || '9888348920';
+        
+        if (phoneNumber) {
+          const headers = { 'Authorization': `Bearer ${token}` };
+          
+          this.http.get<any>(`http://localhost:8081/auth/by-phone/${phoneNumber}`, { headers }).subscribe({
+            next: (userData) => {
+              if (userData) {
+                this.currentUserId = userData.id;
+                this.doctorID = userData.id;
+                this.searchDoctorID = userData.id;
+                this.doctorName = userData.name || payload.name || `Dr. ${userData.id}`;
+                this.specialty = userData.specialisation || 'Cardiology';
+                console.log('User data from phone API:', userData);
+                
+                // Load appointments with correct doctor ID
+                setTimeout(() => {
+                  this.loadAppointments();
+                }, 500);
+              }
+            },
+            error: (error) => {
+              console.error('Error fetching user data by phone:', error);
+              // Fallback to JWT data and generated ID
+              this.doctorName = payload.name || 'Dr. Atul Sahu';
+              this.specialty = 'Cardiology';
+              this.currentUserId = this.generateIdFromEmail(payload.sub || payload.email);
+              this.doctorID = this.currentUserId;
+              this.searchDoctorID = this.currentUserId;
+              
+              setTimeout(() => {
+                this.loadAppointments();
+              }, 500);
+            }
+          });
+        }
       } catch (error) {
-        console.error('Error extracting user ID from token:', error);
-        this.currentUserId = 1;
-        this.doctorID = 1;
-        this.searchDoctorID = 1;
+        console.error('Error parsing JWT token:', error);
       }
     }
   }
@@ -109,17 +216,32 @@ export class DoctorAvailabilty {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         this.userRole = payload.role || payload.user_type;
-        this.currentUserId = payload.userId || payload.id || 0;
         
-        // Auto-populate doctor ID for all users
+        // Generate consistent ID from email for now
+        const userEmail = payload.sub || payload.email;
+        if (userEmail) {
+          this.currentUserId = this.generateIdFromEmail(userEmail);
+        }
+        
         this.doctorID = this.currentUserId;
         this.searchDoctorID = this.currentUserId;
+        this.doctorName = payload.name || 'Dr. Atul Sahu';
         
         console.log('User role:', this.userRole, 'User ID:', this.currentUserId, 'Doctor ID set to:', this.doctorID);
       } catch (error) {
         console.error('Error parsing token:', error);
       }
     }
+  }
+
+  private generateIdFromEmail(email: string): number {
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+      const char = email.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash % 90000) + 10000;
   }
 
   canManageAvailability(): boolean {
@@ -330,10 +452,12 @@ export class DoctorAvailabilty {
     this.availabilityService.addAvailability({
       doctorID: this.doctorID!,
       date: this.date,
-      timeSlots: this.selectedTimeSlots
+      timeSlots: this.selectedTimeSlots,
+      doctorName: this.doctorName || `Dr. ${this.doctorID}`,
+      specialty: this.specialty || 'General Medicine'
     }).subscribe({
       next: () => {
-        this.showMessage(`✅ Availability added successfully for Dr. ${this.doctorID}!`, 'success');
+        this.showCustomAlert('success', 'Availability Created', `Schedule successfully added for Dr. ${this.doctorName || this.doctorID} on ${this.date}`);
         this.resetAddForm();
         this.refreshIfSearchActive();
       },
@@ -438,15 +562,66 @@ export class DoctorAvailabilty {
   }
  
   private showMessage(text: string, type: 'success' | 'error' | 'warning') {
-    this.message = text;
-    this.messageType = type;
-   
-    // Auto-hide success and warning messages, keep error messages longer
-    const hideDelay = type === 'error' ? 5000 : type === 'warning' ? 4000 : 3000;
+    const cleanText = text.replace(/[🎉✅❌⚠️ℹ️👨⚕️📅🗑️]/g, '').trim();
+    const alertBox = document.createElement('div');
+    alertBox.className = `custom-alert-box alert-${type}`;
+    alertBox.innerHTML = `
+      <div class="alert-icon">${this.getAlertIcon(type)}</div>
+      <div class="alert-content">
+        <div class="alert-title">${this.getAlertTitle(type)}</div>
+        <div class="alert-message">${cleanText}</div>
+      </div>
+      <button class="alert-close-btn" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    
+    document.body.appendChild(alertBox);
+    
     setTimeout(() => {
-      this.message = '';
-      this.messageType = '';
-    }, hideDelay);
+      if (alertBox.parentElement) {
+        alertBox.classList.add('fade-out');
+        setTimeout(() => alertBox.remove(), 300);
+      }
+    }, type === 'error' ? 6000 : 4000);
+  }
+
+  showCustomAlert(type: 'success' | 'error' | 'warning', title: string, message: string) {
+    const alertBox = document.createElement('div');
+    alertBox.className = `custom-alert-box alert-${type}`;
+    alertBox.innerHTML = `
+      <div class="alert-icon">${this.getAlertIcon(type)}</div>
+      <div class="alert-content">
+        <div class="alert-title">${title}</div>
+        <div class="alert-message">${message}</div>
+      </div>
+      <button class="alert-close-btn" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    
+    document.body.appendChild(alertBox);
+    
+    setTimeout(() => {
+      if (alertBox.parentElement) {
+        alertBox.classList.add('fade-out');
+        setTimeout(() => alertBox.remove(), 300);
+      }
+    }, type === 'error' ? 6000 : 4000);
+  }
+
+  private getAlertIcon(type: string): string {
+    const icons = {
+      success: '✅',
+      error: '❌', 
+      warning: '⚠️'
+    };
+    return icons[type as keyof typeof icons] || '✅';
+  }
+
+  private getAlertTitle(type: string): string {
+    const titles = {
+      success: 'Success',
+      error: 'Error',
+      warning: 'Warning'
+    };
+    return titles[type as keyof typeof titles] || 'Notification';
   }
 }
  
