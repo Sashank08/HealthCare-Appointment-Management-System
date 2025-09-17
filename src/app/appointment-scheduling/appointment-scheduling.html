@@ -1,4 +1,11 @@
-<div class="container">
+<div class="container-fluid py-4">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h1 class="display-4 fw-bold text-white mb-3">
+        <i class="fas fa-hospital-user me-3"></i>Healthcare Appointment System
+      </h1>
+      <p class="lead text-white-50">Book, Update, and Manage Your Medical Appointments</p>
+    </div>
 
     <!-- Success/Error Messages -->
     <div *ngIf="successMessage" class="alert alert-success text-center mb-4">
@@ -11,9 +18,13 @@
     <!-- Book Appointment Form -->
     <div class="card shadow border-0 mb-5">
       <div class="card-body p-5">
-        <h3 class="text-center mb-4 text-primary">
-          <i class="fas fa-plus-circle me-2"></i>Book New Appointment
-        </h3>
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle p-3 mb-3">
+            <i class="fas fa-calendar-plus fa-2x text-primary"></i>
+          </div>
+          <h3 class="text-primary fw-bold">Book New Appointment</h3>
+          <p class="text-muted">Schedule your medical consultation</p>
+        </div>
         <form #bookForm="ngForm" (ngSubmit)="onBookAppointment(bookForm.value)">
           <div class="row">
             <div class="col-md-6 mb-3">
@@ -31,27 +42,47 @@
               <input type="email" class="form-control" name="patientEmail" placeholder="Enter Patient Email" ngModel required>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Doctor ID <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="doctorId" placeholder="Enter Doctor ID" ngModel required>
+              <label class="form-label">
+                <i class="fas fa-stethoscope me-2 text-primary"></i>Specialisation <span class="text-danger">*</span>
+              </label>
+              <select class="form-select" [(ngModel)]="selectedSpecialisation" (ngModelChange)="onSpecialisationChange()" name="specialisation" required>
+                <option value="">Select Medical Specialisation</option>
+                <option *ngFor="let spec of specialisations" [value]="spec">
+                  <i class="fas fa-user-md me-2"></i>{{spec}}
+                </option>
+              </select>
             </div>
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="doctorName" placeholder="Enter Doctor Name" ngModel required>
+              <label class="form-label">
+                <i class="fas fa-user-md me-2 text-success"></i>Doctor <span class="text-danger">*</span>
+              </label>
+              <select class="form-select" [(ngModel)]="selectedDoctor" name="doctor" required [disabled]="!selectedSpecialisation" (ngModelChange)="onDoctorChange()">
+                <option value="">{{selectedSpecialisation ? 'Choose Your Doctor' : 'Select Specialisation First'}}</option>
+                <option *ngFor="let doctor of doctors" [ngValue]="doctor">
+                  <i class="fas fa-user-md me-2"></i>Dr. {{doctor.name}} (ID: {{doctor.id}})
+                </option>
+              </select>
+              <div *ngIf="!selectedSpecialisation" class="form-text text-muted">
+                <i class="fas fa-info-circle me-1"></i>Please select a specialisation first
+              </div>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Appointment Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" name="date" ngModel required>
+              <input type="date" class="form-control" name="date" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()" [min]="getTodayDate()" required>
             </div>
           </div>
           <div class="row">
             <div class="col-md-4 mb-3">
-              <label class="form-label">Time Slot <span class="text-danger">*</span></label>
-              <select class="form-select" name="slot" [(ngModel)]="selectedSlot" required (ngModelChange)="onSlotChange($event, bookForm)">
-                <option value="">Select Time Slot</option>
-                <option *ngFor="let slot of timeSlots" [value]="slot.value">{{slot.label}}</option>
+              <label class="form-label">Available Time Slots <span class="text-danger">*</span></label>
+              <select class="form-select" name="slot" [(ngModel)]="selectedSlot" required [disabled]="!selectedDoctor || !selectedDate" (ngModelChange)="onSlotChange($event)">
+                <option value="">{{availableSlots.length ? 'Choose Available Slot' : 'Select Doctor & Date First'}}</option>
+                <option *ngFor="let slot of availableSlots" [value]="slot">{{slot}}</option>
               </select>
+              <div *ngIf="selectedDoctor && selectedDate && availableSlots.length === 0" class="form-text text-danger">
+                <i class="fas fa-calendar-times me-1"></i>Doctor is not free on selected date
+              </div>
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label">Start Time</label>
@@ -66,9 +97,12 @@
             <label class="form-label">Reason (Optional)</label>
             <input type="text" class="form-control" name="reason" placeholder="Enter reason for appointment" ngModel>
           </div>
-          <button type="submit" class="btn btn-primary btn-lg w-100">
-            <i class="fas fa-calendar-plus me-2"></i>Book Appointment
-          </button>
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary btn-lg px-5 py-3">
+              <i class="fas fa-calendar-plus me-2"></i>Book My Appointment
+              <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -76,9 +110,13 @@
     <!-- Update Appointment Form -->
     <div class="card shadow border-0 mb-5">
       <div class="card-body p-5">
-        <h3 class="text-center mb-4 text-warning">
-          <i class="fas fa-edit me-2"></i>Update Appointment
-        </h3>
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 rounded-circle p-3 mb-3">
+            <i class="fas fa-edit fa-2x text-warning"></i>
+          </div>
+          <h3 class="text-warning fw-bold">Update Appointment</h3>
+          <p class="text-muted">Modify your existing appointment details</p>
+        </div>
         <form #updateForm="ngForm" (ngSubmit)="onUpdateAppointment(updateForm.value)">
           <div class="row">
             <div class="col-md-6 mb-3">
@@ -127,9 +165,12 @@
               <input type="text" class="form-control" name="reason" placeholder="Enter reason for update" ngModel required>
             </div>
           </div>
-          <button type="submit" class="btn btn-warning btn-lg w-100">
-            <i class="fas fa-edit me-2"></i>Update Appointment
-          </button>
+          <div class="text-center">
+            <button type="submit" class="btn btn-warning btn-lg px-5 py-3">
+              <i class="fas fa-edit me-2"></i>Update My Appointment
+              <i class="fas fa-check ms-2"></i>
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -137,9 +178,13 @@
     <!-- Cancel Appointment Form -->
     <div class="card shadow border-0 mb-5">
       <div class="card-body p-5">
-        <h3 class="text-center mb-4 text-danger">
-          <i class="fas fa-times-circle me-2"></i>Cancel Appointment
-        </h3>
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 rounded-circle p-3 mb-3">
+            <i class="fas fa-times-circle fa-2x text-danger"></i>
+          </div>
+          <h3 class="text-danger fw-bold">Cancel Appointment</h3>
+          <p class="text-muted">Cancel your scheduled appointment</p>
+        </div>
         <form #cancelForm="ngForm" (ngSubmit)="onCancelAppointment(cancelForm.value)">
           <div class="row">
             <div class="col-md-6 mb-3">
@@ -179,9 +224,12 @@
             <label class="form-label">Cancellation Reason <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="reason" placeholder="Enter reason for cancellation" ngModel required>
           </div>
-          <button type="submit" class="btn btn-danger btn-lg w-100">
-            <i class="fas fa-times-circle me-2"></i>Cancel Appointment
-          </button>
+          <div class="text-center">
+            <button type="submit" class="btn btn-danger btn-lg px-5 py-3">
+              <i class="fas fa-times-circle me-2"></i>Cancel My Appointment
+              <i class="fas fa-exclamation-triangle ms-2"></i>
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -189,17 +237,24 @@
     <!-- Load Appointments -->
     <div class="card shadow border-0 mb-5">
       <div class="card-body p-5">
-        <h3 class="text-center mb-4 text-info">
-          <i class="fas fa-search me-2"></i>Load Patient Appointments
-        </h3>
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 rounded-circle p-3 mb-3">
+            <i class="fas fa-search fa-2x text-info"></i>
+          </div>
+          <h3 class="text-info fw-bold">Load Patient Appointments</h3>
+          <p class="text-muted">View all appointments for a patient</p>
+        </div>
         <form #loadForm="ngForm" (ngSubmit)="loadPatientAppointments(loadForm.value.patientId)">
           <div class="mb-4">
             <label class="form-label">Patient ID <span class="text-danger">*</span></label>
             <input type="number" class="form-control form-control-lg" name="patientId" placeholder="Enter Patient ID to load appointments" ngModel required>
           </div>
-          <button type="submit" class="btn btn-info btn-lg w-100">
-            <i class="fas fa-search me-2"></i>Load Appointments
-          </button>
+          <div class="text-center">
+            <button type="submit" class="btn btn-info btn-lg px-5 py-3">
+              <i class="fas fa-search me-2"></i>Load All Appointments
+              <i class="fas fa-list ms-2"></i>
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -207,16 +262,23 @@
     <!-- Appointments List -->
     <div class="card shadow border-0">
       <div class="card-body p-5">
-        <h3 class="text-center mb-4 text-success">
-          <i class="fas fa-list me-2"></i>Appointments ({{appointments.length}} total)
-        </h3>
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 rounded-circle p-3 mb-3">
+            <i class="fas fa-list fa-2x text-success"></i>
+          </div>
+          <h3 class="text-success fw-bold">Your Appointments</h3>
+          <p class="text-muted">{{appointments.length}} appointment(s) found</p>
+        </div>
         <div *ngIf="appointments.length === 0" class="text-center text-muted py-5">
-          <i class="fas fa-calendar-times fa-3x mb-3"></i>
-          <p class="lead">No appointments found. Load patient appointments or book a new one.</p>
+          <div class="bg-light rounded-3 p-5">
+            <i class="fas fa-calendar-times fa-4x mb-4 text-muted"></i>
+            <h4 class="mb-3">No Appointments Found</h4>
+            <p class="lead mb-0">Load patient appointments or book a new one to get started.</p>
+          </div>
         </div>
         <div class="row g-4" *ngIf="appointments.length > 0">
           <div class="col-lg-6" *ngFor="let appointment of appointments">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 appointment-card">
               <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <h5 class="card-title mb-0">
@@ -243,4 +305,5 @@
         </div>
       </div>
     </div>
+  </div>
 </div>

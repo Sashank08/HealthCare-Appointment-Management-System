@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AppointmentService, Appointment, AppointmentRequest, AppointmentUpdateRequest, AppointmentCancelInfo } from './appointment.service';
+import { AppointmentService, Appointment, AppointmentRequest, AppointmentUpdateRequest, AppointmentCancelInfo, UserDTO } from './appointment.service';
  
 @Component({
   selector: 'app-appointment-scheduling',
@@ -20,6 +20,14 @@ export class AppointmentScheduling {
   selectedUpdateSlot: string = '';
   selectedUpdateStartTime: string = '';
   selectedUpdateEndTime: string = '';
+  
+  // Doctor and Specialisation data
+  doctors: UserDTO[] = [];
+  specialisations = ['Cardiology', 'Pediatrician', 'Neurologist', 'Orthologist'];
+  selectedSpecialisation: string = '';
+  selectedDoctor: UserDTO | null = null;
+  availableSlots: string[] = [];
+  selectedDate: string = '';
  
   timeSlots = [
     { value: '09:00-10:00', label: '09:00 AM - 10:00 AM', startTime: '09:00', endTime: '10:00' },
@@ -128,11 +136,11 @@ export class AppointmentScheduling {
     this.errorMessage = '';
   }
  
-  onSlotChange(selectedSlot: string, form: any): void {
-    const slot = this.timeSlots.find(s => s.value === selectedSlot);
-    if (slot) {
-      this.selectedStartTime = slot.startTime;
-      this.selectedEndTime = slot.endTime;
+  onSlotChange(selectedSlot: string): void {
+    if (selectedSlot && selectedSlot.includes('-')) {
+      const [startTime, endTime] = selectedSlot.split('-');
+      this.selectedStartTime = startTime.trim();
+      this.selectedEndTime = endTime.trim();
     }
   }
  
@@ -146,21 +154,25 @@ export class AppointmentScheduling {
  
   onBookAppointment(formData: any): void {
     // Validate required fields
-    if (!formData.patientId || !formData.doctorId || !formData.date || !formData.slot ||
-        !formData.patientName || !formData.patientEmail || !formData.doctorName ||
+    if (!formData.patientId || !this.selectedDoctor || !formData.date || !formData.slot ||
+        !formData.patientName || !formData.patientEmail ||
         !formData.startTime || !formData.endTime) {
-      this.errorMessage = 'Please fill all required fields';
+      this.errorMessage = 'Please fill all required fields and select a doctor';
+      return;
+    }
+
+    if (!confirm('Are you sure you want to book this appointment?')) {
       return;
     }
  
     const request: AppointmentRequest = {
       patientId: Number(formData.patientId),
-      doctorId: Number(formData.doctorId),
+      doctorId: this.selectedDoctor.id,
       date: formData.date,
       slot: formData.slot,
       patientName: formData.patientName.trim(),
       patientEmail: formData.patientEmail.trim(),
-      doctorName: formData.doctorName.trim(),
+      doctorName: this.selectedDoctor.name,
       startTime: formData.startTime,
       endTime: formData.endTime
     };
@@ -179,6 +191,10 @@ export class AppointmentScheduling {
         !formData.patientEmail || !formData.doctorName || !formData.startTime ||
         !formData.endTime || !formData.reason) {
       this.errorMessage = 'Please fill all required fields for update';
+      return;
+    }
+
+    if (!confirm('Are you sure you want to update this appointment?')) {
       return;
     }
  
@@ -202,6 +218,10 @@ export class AppointmentScheduling {
       this.errorMessage = 'Please fill all required fields for cancellation';
       return;
     }
+
+    if (!confirm('Are you sure you want to cancel this appointment?')) {
+      return;
+    }
  
     const cancelInfo: AppointmentCancelInfo = {
       patientName: formData.patientName.trim(),
@@ -213,6 +233,66 @@ export class AppointmentScheduling {
       reason: formData.reason.trim()
     };
     this.cancelAppointment(formData.id, cancelInfo);
+  }
+
+  onSpecialisationChange(): void {
+    if (this.selectedSpecialisation) {
+      this.appointmentService.getDoctorsBySpecialisation(this.selectedSpecialisation).subscribe({
+        next: (doctors) => {
+          this.doctors = doctors;
+          this.selectedDoctor = null;
+          this.availableSlots = [];
+        },
+        error: (error) => {
+          console.error('Error loading doctors:', error);
+          this.doctors = [];
+        }
+      });
+    } else {
+      this.doctors = [];
+      this.selectedDoctor = null;
+      this.availableSlots = [];
+    }
+  }
+
+  onDoctorChange(): void {
+    this.availableSlots = [];
+    if (this.selectedDoctor && this.selectedDate) {
+      this.loadAvailableSlots();
+    }
+  }
+
+  onDateChange(): void {
+    this.availableSlots = [];
+    if (this.selectedDoctor && this.selectedDate) {
+      this.loadAvailableSlots();
+    }
+  }
+
+  loadAvailableSlots(): void {
+    if (this.selectedDoctor && this.selectedDate) {
+      // Ensure date is in YYYY-MM-DD format
+      const formattedDate = this.formatDate(this.selectedDate);
+      this.appointmentService.getAvailableSlots(this.selectedDoctor.id, formattedDate).subscribe({
+        next: (slots) => {
+          this.availableSlots = slots;
+        },
+        error: (error) => {
+          console.error('Error loading available slots:', error);
+          this.availableSlots = [];
+        }
+      });
+    }
+  }
+
+  formatDate(date: string): string {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  }
+
+  getTodayDate(): string {
+    return new Date().toISOString().split('T')[0];
   }
 }
  
