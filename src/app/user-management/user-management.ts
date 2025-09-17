@@ -172,7 +172,6 @@ export class UserManagementComponent implements OnInit {
           
           if (this.canAccessDoctorDashboard()) {
             this.loadDoctorStats();
-            this.loadDoctorProfile(); // Ensure doctor profile is loaded
             this.currentView = 'doctor-dashboard';
             this.scrollToDoctorDashboard();
           }
@@ -682,19 +681,18 @@ export class UserManagementComponent implements OnInit {
 
   extractUserInfoFromToken(token: string) {
     try {
-      this.userEmail = this.authService.extractUserEmailFromToken(token) || this.userEmail;
       const payload = JSON.parse(atob(token.split('.')[1]));
+      this.userEmail = payload.sub || payload.email || this.userEmail;
+      this.userName = payload.name || this.userName;
       this.userPhone = payload.phone || '';
       this.userAge = payload.age || 0;
       
-      // Only generate patient ID for patients, not doctors
-      if (this.userRole === 'PATIENT' && this.userEmail) {
+      // Generate consistent ID from email
+      if (this.userEmail) {
         this.userId = this.generatePatientId(this.userEmail);
-      } else if (this.userRole === 'DOCTOR') {
-        this.userId = 0; // Will be set from backend
       }
       
-      console.log('Extracted user info - ID:', this.userId, 'Email:', this.userEmail, 'Phone:', this.userPhone, 'Age:', this.userAge);
+      console.log('Extracted user info - ID:', this.userId, 'Email:', this.userEmail, 'Phone:', this.userPhone, 'Age:', this.userAge, 'Name:', this.userName);
     } catch (error) {
       console.error('Error extracting user info from token:', error);
     }
@@ -811,42 +809,46 @@ export class UserManagementComponent implements OnInit {
   }
 
   loadDoctorProfile() {
-    const phoneToSearch = this.userPhone || '9888348912';
-    console.log('Loading doctor profile for phone:', phoneToSearch);
+    // Use phone number from JWT or fallback to known doctor phone
+    const phoneToSearch = this.userPhone || '9888348920';
     
-    this.authService.getUserByPhone(phoneToSearch).subscribe({
-      next: (doctor) => {
-        // Update user info with real database data
-        this.userName = doctor.name || this.userName;
-        this.userEmail = doctor.userEmail || this.userEmail;
-        this.userPhone = doctor.phone ? doctor.phone.toString() : this.userPhone;
-        this.userId = doctor.id || this.userId;
-        this.userAge = doctor.age || this.userAge;
-        
-        // Set doctor profile with real specialisation from backend
-        this.doctorProfile = {
-          specialization: (doctor as any).specialisation || 'General Medicine',
-          experience: '5+ years',
-          qualification: 'MBBS, MD'
-        };
-        
-        console.log('Doctor profile loaded from auth service:', doctor);
-        console.log('Updated userId to:', this.userId);
-        console.log('Updated userName to:', this.userName);
-      },
-      error: (error) => {
-        console.error('Error loading doctor profile:', error);
-        // Fallback to default values
-        this.doctorProfile = {
-          specialization: 'General Medicine',
-          experience: '5+ years',
-          qualification: 'MBBS, MD'
-        };
-        if (!this.userPhone) {
-          this.userPhone = '9888348912';
+    if (phoneToSearch) {
+      this.authService.getUserByPhone(phoneToSearch).subscribe({
+        next: (doctor) => {
+          if (doctor) {
+            // Update user info with real database data
+            this.userId = doctor.id;
+            this.userName = doctor.name || this.userName;
+            this.userPhone = doctor.phone?.toString() || this.userPhone;
+            
+            // Set doctor profile
+            this.doctorProfile = {
+              specialization: doctor.specialisation || 'Cardiology',
+              experience: '5+ years',
+              qualification: 'MBBS, MD'
+            };
+            
+            console.log('Doctor profile loaded by phone:', doctor);
+          }
+        },
+        error: (error) => {
+          console.error('Error loading doctor profile by phone:', error);
+          // Fallback to JWT data
+          this.doctorProfile = {
+            specialization: 'Cardiology',
+            experience: '5+ years',
+            qualification: 'MBBS, MD'
+          };
         }
-      }
-    });
+      });
+    } else {
+      // Fallback to default values
+      this.doctorProfile = {
+        specialization: 'Cardiology',
+        experience: '5+ years',
+        qualification: 'MBBS, MD'
+      };
+    }
   }
 
   getAppointmentStatus(slot: string): string {
