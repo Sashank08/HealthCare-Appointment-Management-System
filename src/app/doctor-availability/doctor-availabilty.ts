@@ -68,10 +68,10 @@ export class AvailabilityService {
       { date: newDate, slot: newSlot }, { headers });
   }
 
-  cancelAppointment(appointmentId: number): Observable<any> {
+  cancelAppointment(appointmentId: number, cancelData: any): Observable<any> {
     const token = localStorage.getItem('authToken');
     const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.delete(`http://localhost:8081/appointments/cancel/${appointmentId}`, { headers });
+    return this.http.delete(`http://localhost:8081/appointments/cancel/${appointmentId}`, { headers, body: cancelData });
   }
 }
  
@@ -698,7 +698,17 @@ export class DoctorAvailabilty {
     
     if (!confirm(confirmMessage)) return;
 
-    this.availabilityService.cancelAppointment(appointment.id).subscribe({
+    const cancelData = {
+      patientName: appointment.patientName || 'Unknown Patient',
+      doctorName: this.doctorName || 'Dr. Atul Sahu',
+      patientEmail: `patient${appointment.patientId}@example.com`,
+      date: appointment.date,
+      startTime: appointment.slot.split(' - ')[0] || appointment.slot,
+      endTime: appointment.slot.split(' - ')[1] || appointment.slot,
+      reason: 'Cancelled by doctor'
+    };
+
+    this.availabilityService.cancelAppointment(appointment.id, cancelData).subscribe({
       next: () => {
         this.showCustomAlert('success', 'Appointment Cancelled', 
           `Appointment for ${appointment.date} at ${appointment.slot} has been cancelled`);
