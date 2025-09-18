@@ -108,7 +108,7 @@
     </div>
 
     <!-- Update Appointment Form -->
-    <div class="card shadow border-0 mb-5">
+    <div id="update-form" class="card shadow border-0 mb-5" *ngIf="showUpdateForm">
       <div class="card-body p-5">
         <div class="text-center mb-4">
           <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 rounded-circle p-3 mb-3">
@@ -121,11 +121,11 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Appointment ID <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="id" placeholder="Enter Appointment ID" ngModel required>
+              <input type="number" class="form-control" name="id" placeholder="Enter Appointment ID" [(ngModel)]="updateFormData.id" required>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">New Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" name="newDate" ngModel required>
+              <input type="date" class="form-control" name="newDate" [(ngModel)]="updateFormData.newDate" required>
             </div>
           </div>
           <div class="row">
@@ -158,7 +158,7 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="doctorName" placeholder="Enter Doctor Name" ngModel required>
+              <input type="text" class="form-control" name="doctorName" placeholder="Enter Doctor Name" [value]="updateFormData.doctorName || ''" ngModel required>
             </div>
             <div class="col-md-6 mb-4">
               <label class="form-label">Reason for Update <span class="text-danger">*</span></label>
@@ -176,7 +176,7 @@
     </div>
 
     <!-- Cancel Appointment Form -->
-    <div class="card shadow border-0 mb-5">
+    <div id="cancel-form" class="card shadow border-0 mb-5" *ngIf="showCancelForm">
       <div class="card-body p-5">
         <div class="text-center mb-4">
           <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 rounded-circle p-3 mb-3">
@@ -189,35 +189,35 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Appointment ID <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="id" placeholder="Enter Appointment ID" ngModel required>
+              <input type="number" class="form-control" name="id" placeholder="Enter Appointment ID" [(ngModel)]="cancelFormData.id" required>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Appointment Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control" name="date" ngModel required>
+              <input type="date" class="form-control" name="date" [(ngModel)]="cancelFormData.date" required>
             </div>
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Patient Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="patientName" placeholder="Enter Patient Name" ngModel required>
+              <input type="text" class="form-control" name="patientName" placeholder="Enter Patient Name" [value]="cancelFormData.patientName || ''" ngModel required>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="doctorName" placeholder="Enter Doctor Name" ngModel required>
+              <input type="text" class="form-control" name="doctorName" placeholder="Enter Doctor Name" [value]="cancelFormData.doctorName || ''" ngModel required>
             </div>
           </div>
           <div class="row">
             <div class="col-md-4 mb-3">
               <label class="form-label">Patient Email <span class="text-danger">*</span></label>
-              <input type="email" class="form-control" name="patientEmail" placeholder="Enter Patient Email" ngModel required>
+              <input type="email" class="form-control" name="patientEmail" placeholder="Enter Patient Email" [value]="cancelFormData.patientEmail || ''" ngModel required>
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label">Start Time <span class="text-danger">*</span></label>
-              <input type="time" class="form-control" name="startTime" ngModel required>
+              <input type="time" class="form-control" name="startTime" [(ngModel)]="cancelFormData.startTime" required>
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label">End Time <span class="text-danger">*</span></label>
-              <input type="time" class="form-control" name="endTime" ngModel required>
+              <input type="time" class="form-control" name="endTime" [(ngModel)]="cancelFormData.endTime" required>
             </div>
           </div>
           <div class="mb-4">
@@ -234,30 +234,7 @@
       </div>
     </div>
 
-    <!-- Load Appointments -->
-    <div class="card shadow border-0 mb-5">
-      <div class="card-body p-5">
-        <div class="text-center mb-4">
-          <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 rounded-circle p-3 mb-3">
-            <i class="fas fa-search fa-2x text-info"></i>
-          </div>
-          <h3 class="text-info fw-bold">Load Patient Appointments</h3>
-          <p class="text-muted">View all appointments for a patient</p>
-        </div>
-        <form #loadForm="ngForm" (ngSubmit)="loadPatientAppointments(loadForm.value.patientId)">
-          <div class="mb-4">
-            <label class="form-label">Patient ID <span class="text-danger">*</span></label>
-            <input type="number" class="form-control form-control-lg" name="patientId" placeholder="Enter Patient ID to load appointments" ngModel required>
-          </div>
-          <div class="text-center">
-            <button type="submit" class="btn btn-info btn-lg px-5 py-3">
-              <i class="fas fa-search me-2"></i>Load All Appointments
-              <i class="fas fa-list ms-2"></i>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+
 
     <!-- Appointments List -->
     <div class="card shadow border-0">
@@ -284,7 +261,7 @@
                   <h5 class="card-title mb-0">
                     <i class="fas fa-calendar-check text-success me-2"></i>ID: {{appointment.id}}
                   </h5>
-                  <span class="badge bg-success">BOOKED</span>
+                  <span class="badge bg-success">{{appointment.status || 'BOOKED'}}</span>
                 </div>
                 <div class="row">
                   <div class="col-6">
@@ -296,9 +273,15 @@
                     <p class="mb-2"><strong>Slot:</strong> {{appointment.slot}}</p>
                   </div>
                 </div>
-                <p *ngIf="appointment.status" class="mb-0"><strong>Status:</strong> 
-                  <span class="badge bg-primary">{{appointment.status}}</span>
-                </p>
+                <div class="mt-3 d-flex gap-2" *ngIf="appointment.status !== 'CANCELLED'">
+                  <button class="btn btn-medical-reschedule btn-sm flex-fill" (click)="selectAppointmentForUpdate(appointment)">
+                    <i class="fas fa-calendar-alt me-1 btn-icon"></i>Reschedule
+                  </button>
+                  <button class="btn btn-medical-cancel btn-sm flex-fill" (click)="selectAppointmentForCancel(appointment)">
+                    <i class="fas fa-times me-1 btn-icon"></i>Cancel
+                  </button>
+                </div>
+
               </div>
             </div>
           </div>
