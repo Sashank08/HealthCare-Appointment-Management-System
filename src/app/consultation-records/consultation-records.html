@@ -159,6 +159,140 @@
         </div>
       </div>
 
+      <!-- Get Upcoming Appointment Section -->
+      <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-calendar-check me-2"></i>
+            Get Upcoming Appointment
+          </h5>
+        </div>
+        <div class="card-body">
+          @if (upcomingAppointmentSuccess) {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              {{ upcomingAppointmentSuccess }}
+              <button type="button" class="btn-close" (click)="clearUpcomingAppointmentMessages()" aria-label="Close"></button>
+            </div>
+          }
+
+          @if (upcomingAppointmentError) {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              {{ upcomingAppointmentError }}
+              <button type="button" class="btn-close" (click)="clearUpcomingAppointmentMessages()" aria-label="Close"></button>
+            </div>
+          }
+
+          <form [formGroup]="upcomingAppointmentForm" (ngSubmit)="getUpcomingAppointment()">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="upcomingPatientId" class="form-label">Patient ID <span class="text-danger">*</span></label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="upcomingPatientId"
+                  formControlName="patientId"
+                  [class.is-invalid]="hasUpcomingError('patientId')"
+                  placeholder="Enter Patient ID"
+                  min="1">
+                @if (hasUpcomingError('patientId')) {
+                  <div class="invalid-feedback">
+                    Patient ID is required and must be a positive number.
+                  </div>
+                }
+              </div>
+              <div class="col-md-6">
+                <label for="appointmentDate" class="form-label">Date <span class="text-danger">*</span></label>
+                <input
+                  type="date"
+                  class="form-control"
+                  id="appointmentDate"
+                  formControlName="date"
+                  [class.is-invalid]="hasUpcomingError('date')">
+                @if (hasUpcomingError('date')) {
+                  <div class="invalid-feedback">
+                    Date is required.
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="d-flex justify-content-end mt-3">
+              <button
+                type="submit"
+                class="btn btn-warning"
+                [disabled]="upcomingAppointmentForm.invalid || isLoadingUpcomingAppointment">
+                @if (isLoadingUpcomingAppointment) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Loading...
+                } @else {
+                  <i class="bi bi-search me-2"></i>
+                  Get Appointment ID
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Get Patient by Phone Section -->
+      <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-telephone me-2"></i>
+            Get Patient by Phone Number
+          </h5>
+        </div>
+        <div class="card-body">
+          @if (patientByPhoneSuccess) {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              {{ patientByPhoneSuccess }}
+              <button type="button" class="btn-close" (click)="clearPatientByPhoneMessages()" aria-label="Close"></button>
+            </div>
+          }
+
+          @if (patientByPhoneError) {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              {{ patientByPhoneError }}
+              <button type="button" class="btn-close" (click)="clearPatientByPhoneMessages()" aria-label="Close"></button>
+            </div>
+          }
+
+          <form [formGroup]="patientByPhoneForm" (ngSubmit)="getPatientByPhone()">
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <label for="phoneNumber" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                <input
+                  type="tel"
+                  class="form-control"
+                  id="phoneNumber"
+                  formControlName="phone"
+                  [class.is-invalid]="hasPhoneError('phone')"
+                  placeholder="Enter 10-15 digit phone number"
+                  maxlength="15">
+                @if (hasPhoneError('phone')) {
+                  <div class="invalid-feedback">
+                    Please enter a valid phone number (10-15 digits only).
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="d-flex justify-content-end mt-3">
+              <button
+                type="submit"
+                class="btn btn-info"
+                [disabled]="patientByPhoneForm.invalid || isLoadingPatientByPhone">
+                @if (isLoadingPatientByPhone) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Loading...
+                } @else {
+                  <i class="bi bi-search me-2"></i>
+                  Get Patient ID
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       @if (selectedPatientId) {
         <div class="card">
           <div class="card-header">

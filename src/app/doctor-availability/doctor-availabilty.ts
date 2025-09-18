@@ -711,19 +711,6 @@ export class DoctorAvailabilty {
     });
   }
 
-  // Navigate to consultation
-  goToConsultation() {
-    if (this.userRole !== 'DOCTOR') {
-      this.showMessage('Access denied: Only doctors can start consultations', 'error');
-      return;
-    }
-    
-    if (!this.currentUserId) {
-      this.showMessage('Doctor ID not found. Please refresh and try again.', 'error');
-      return;
-    }
-    
-    this.router.navigate(['/app-consultation-records']);
-  }
+
 }
  

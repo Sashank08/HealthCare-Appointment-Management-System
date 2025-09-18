@@ -49,14 +49,6 @@
               <small class="text-muted">Age:</small><br>
               <strong>{{userAge}} years</strong>
             </li>
-            <li class="px-3 py-2" *ngIf="userRole === 'PATIENT'">
-              <small class="text-muted">Patient ID:</small><br>
-              <strong>#{{userId}}</strong>
-            </li>
-            <li class="px-3 py-2" *ngIf="userRole === 'DOCTOR' || userRole === 'ADMIN'">
-              <small class="text-muted">Doctor ID:</small><br>
-              <strong>#{{userId}}</strong>
-            </li>
             <li><hr class="dropdown-divider"></li>
             <li>
               <button class="dropdown-item text-danger" (click)="logout()">
@@ -1241,10 +1233,6 @@
                 <h5 class="mb-3">Doctor Profile</h5>
                 <div class="row">
                   <div class="col-sm-6 mb-2">
-                    <small class="text-muted">Doctor ID:</small>
-                    <div class="fw-semibold">#{{userId || 'DOC-001'}}</div>
-                  </div>
-                  <div class="col-sm-6 mb-2">
                     <small class="text-muted">Email:</small>
                     <div class="fw-semibold">{{userEmail || 'Not Available'}}</div>
                   </div>
@@ -1346,7 +1334,7 @@
     </div>
     
     <div class="text-center mt-4">
-      <button class="btn btn-primary px-4" (click)="currentView = 'dashboard'; scrollToDashboard()">
+      <button class="btn btn-primary px-4" (click)="goBackFromConsultation()">
         <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
       </button>
     </div>

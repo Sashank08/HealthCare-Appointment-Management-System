@@ -25,8 +25,6 @@ export class ConsultationRecordsService {
   
   private readonly baseUrl = 'http://localhost:8081/consult';
   
-  private readonly authToken = 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJEci4gUmFodWwiLCJyb2xlIjoiZG9jdG9yIiwiaWQiOjEsImlhdCI6MTc1NzkxNjYxNiwiZXhwIjoxNzU3OTUyNjE2fQ.GBDRVQzHAWUehLFXkl5EIF27Sy2qntN5bolMT_Uj7wg';
-  
   private loadingSubject = new BehaviorSubject<boolean>(false);
   private submittingSubject = new BehaviorSubject<boolean>(false);
   
@@ -35,10 +33,16 @@ export class ConsultationRecordsService {
   
   private consultationsCache = new Map<number, Consultation[]>();
 
+  private getTokenFromStorage(): string {
+    const token = localStorage.getItem('authToken');
+    return token ? `Bearer ${token}` : '';
+  }
+
   private getAuthHeaders(): HttpHeaders {
+    const authToken = this.getTokenFromStorage();
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': this.authToken,
+      'Authorization': authToken,
       'Accept': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -47,9 +51,10 @@ export class ConsultationRecordsService {
   }
 
   private getAuthHeadersForText(): HttpHeaders {
+    const authToken = this.getTokenFromStorage();
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': this.authToken,
+      'Authorization': authToken,
       'Accept': 'text/plain'
     });
   }
@@ -104,6 +109,46 @@ export class ConsultationRecordsService {
       catchError(error => {
         console.error('HTTP Error:', error);
         this.loadingSubject.next(false);
+        return this.handleError(error);
+      })
+    );
+  }
+
+  getUpcomingAppointmentId(patientId: number, date: string): Observable<number> {
+    console.log('Fetching upcoming appointment for patient:', patientId, 'on date:', date);
+    
+    const options = {
+      headers: this.getAuthHeaders(),
+      params: {
+        patientId: patientId.toString(),
+        date: date
+      }
+    };
+    
+    return this.http.get<number>(`${this.baseUrl}/upcoming`, options).pipe(
+      tap(appointmentId => {
+        console.log('Received upcoming appointment ID:', appointmentId);
+      }),
+      catchError(error => {
+        console.error('Error fetching upcoming appointment:', error);
+        return this.handleError(error);
+      })
+    );
+  }
+
+  getPatientByPhone(phone: number): Observable<number> {
+    console.log('Fetching patient ID for phone number:', phone);
+    
+    const options = {
+      headers: this.getAuthHeaders()
+    };
+    
+    return this.http.get<number>(`${this.baseUrl}/get-patient-id/by-phone/${phone}`, options).pipe(
+      tap(patientId => {
+        console.log('Received patient ID:', patientId);
+      }),
+      catchError(error => {
+        console.error('Error fetching patient by phone:', error);
         return this.handleError(error);
       })
     );

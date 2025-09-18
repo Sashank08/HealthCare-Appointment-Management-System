@@ -195,7 +195,8 @@ export class UserManagementComponent implements OnInit {
   }
 
   showCreateConsultation() {
-    alert('Create Consultation - Feature coming soon!');
+    this.currentView = 'consultation-records';
+    this.scrollToConsultationRecords();
   }
 
   showCreateAvailability() {
@@ -210,6 +211,25 @@ export class UserManagementComponent implements OnInit {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }, 100);
+  }
+
+  scrollToConsultationRecords() {
+    setTimeout(() => {
+      const element = document.getElementById('consultation-records');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  }
+
+  goBackFromConsultation() {
+    if (this.userRole === 'DOCTOR' || this.userRole === 'ADMIN') {
+      this.currentView = 'doctor-dashboard';
+      this.scrollToDoctorDashboard();
+    } else {
+      this.currentView = 'dashboard';
+      this.scrollToDashboard();
+    }
   }
 
   register() {
@@ -424,15 +444,6 @@ export class UserManagementComponent implements OnInit {
   scrollToContact() {
     setTimeout(() => {
       const element = document.getElementById('contact');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
-  }
-  
-  scrollToConsultationRecords() {
-    setTimeout(() => {
-      const element = document.getElementById('consultation-records');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }

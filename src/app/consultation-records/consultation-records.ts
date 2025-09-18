@@ -16,15 +16,26 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   consultationForm: FormGroup;
+  upcomingAppointmentForm: FormGroup;
+  patientByPhoneForm: FormGroup;
+  
   consultations: Consultation[] = [];
   selectedPatientId: number | null = null;
+  upcomingAppointmentId: number | null = null;
+  patientIdFromPhone: number | null = null;
   
   errorMessage = '';
   successMessage = '';
-  showAddForm = false;
+  upcomingAppointmentError = '';
+  upcomingAppointmentSuccess = '';
+  patientByPhoneError = '';
+  patientByPhoneSuccess = '';
   
+  showAddForm = false;
   isLoading = false;
   isSubmitting = false;
+  isLoadingUpcomingAppointment = false;
+  isLoadingPatientByPhone = false;
 
   ngOnInit(): void {
     this.consultationForm = this.formBuilder.group({
@@ -32,6 +43,15 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
       prescription: ['', [Validators.required, Validators.maxLength(1000)]],
       appointmentId: ['', [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
       patientId: ['', [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]]
+    });
+
+    this.upcomingAppointmentForm = this.formBuilder.group({
+      patientId: ['', [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
+      date: ['', [Validators.required]]
+    });
+
+    this.patientByPhoneForm = this.formBuilder.group({
+      phone: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]]
     });
 
     this.consultationService.loading$
@@ -143,9 +163,73 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
     }
   }
 
+  getUpcomingAppointment(): void {
+    if (this.upcomingAppointmentForm.valid) {
+      this.clearUpcomingAppointmentMessages();
+      this.isLoadingUpcomingAppointment = true;
+      
+      const { patientId, date } = this.upcomingAppointmentForm.value;
+      
+      this.consultationService.getUpcomingAppointmentId(patientId, date)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (appointmentId) => {
+            this.upcomingAppointmentId = appointmentId;
+            this.upcomingAppointmentSuccess = `Upcoming appointment ID: ${appointmentId}`;
+            this.isLoadingUpcomingAppointment = false;
+          },
+          error: (error) => {
+            this.upcomingAppointmentError = error.message;
+            this.upcomingAppointmentId = null;
+            this.isLoadingUpcomingAppointment = false;
+          }
+        });
+    } else {
+      this.markFormGroupTouchedByName('upcomingAppointmentForm');
+      this.upcomingAppointmentError = 'Please fill in all required fields correctly.';
+    }
+  }
+
+  getPatientByPhone(): void {
+    if (this.patientByPhoneForm.valid) {
+      this.clearPatientByPhoneMessages();
+      this.isLoadingPatientByPhone = true;
+      
+      const { phone } = this.patientByPhoneForm.value;
+      
+      this.consultationService.getPatientByPhone(phone)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (patientId) => {
+            this.patientIdFromPhone = patientId;
+            this.patientByPhoneSuccess = `Patient ID: ${patientId}`;
+            this.isLoadingPatientByPhone = false;
+          },
+          error: (error) => {
+            this.patientByPhoneError = error.message;
+            this.patientIdFromPhone = null;
+            this.isLoadingPatientByPhone = false;
+          }
+        });
+    } else {
+      this.markFormGroupTouchedByName('patientByPhoneForm');
+      this.patientByPhoneError = 'Please enter a valid phone number (10-15 digits).';
+    }
+  }
+
   clearMessages(): void {
     this.errorMessage = '';
     this.successMessage = '';
+  }
+
+  clearUpcomingAppointmentMessages(): void {
+    this.upcomingAppointmentError = '';
+    this.upcomingAppointmentSuccess = '';
+  }
+
+  clearPatientByPhoneMessages(): void {
+    this.patientByPhoneError = '';
+    this.patientByPhoneSuccess = '';
   }
 
   trackByConsultationId(index: number, consultation: Consultation): number {
@@ -158,12 +242,49 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
     });
   }
 
+  private markFormGroupTouchedByName(formName: string): void {
+    let targetForm: FormGroup;
+    
+    switch(formName) {
+      case 'upcomingAppointmentForm':
+        targetForm = this.upcomingAppointmentForm;
+        break;
+      case 'patientByPhoneForm':
+        targetForm = this.patientByPhoneForm;
+        break;
+      default:
+        targetForm = this.consultationForm;
+    }
+    
+    Object.keys(targetForm.controls).forEach(key => {
+      targetForm.get(key)?.markAsTouched();
+    });
+  }
+
   get f() {
     return this.consultationForm.controls;
   }
 
+  get upcomingF() {
+    return this.upcomingAppointmentForm.controls;
+  }
+
+  get phoneF() {
+    return this.patientByPhoneForm.controls;
+  }
+
   hasError(fieldName: string): boolean {
     const field = this.consultationForm.get(fieldName);
+    return !!(field && field.invalid && (field.dirty || field.touched));
+  }
+
+  hasUpcomingError(fieldName: string): boolean {
+    const field = this.upcomingAppointmentForm.get(fieldName);
+    return !!(field && field.invalid && (field.dirty || field.touched));
+  }
+
+  hasPhoneError(fieldName: string): boolean {
+    const field = this.patientByPhoneForm.get(fieldName);
     return !!(field && field.invalid && (field.dirty || field.touched));
   }
 

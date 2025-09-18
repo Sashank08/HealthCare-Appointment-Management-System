@@ -24,9 +24,6 @@
         <span *ngIf="!userRole">Search Availability</span>
       </h2>
       <div class="header-actions" *ngIf="userRole === 'DOCTOR'">
-        <button class="btn-consultation" (click)="goToConsultation()" title="Start Consultation">
-          Start Consultation
-        </button>
         <div class="view-toggle">
           <button class="toggle-btn" [class.active]="!showAppointments" (click)="showAppointments = false">Availability</button>
           <button class="toggle-btn" [class.active]="showAppointments" (click)="toggleAppointmentsView()">Appointments</button>
