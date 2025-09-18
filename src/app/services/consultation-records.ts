@@ -80,12 +80,8 @@ export class ConsultationRecordsService {
   }
 
   getMedicalHistory(patientId: number, forceRefresh: boolean = false): Observable<Consultation[]> {
-    console.log('Attempting to fetch medical history for patient:', patientId);
-    console.log('Request URL:', `${this.baseUrl}/view-mh/${patientId}`);
-    
     if (!forceRefresh && this.consultationsCache.has(patientId)) {
       const cachedData = this.consultationsCache.get(patientId)!;
-      console.log('Returning cached data:', cachedData);
       return new Observable(observer => {
         observer.next(cachedData);
         observer.complete();
@@ -98,11 +94,8 @@ export class ConsultationRecordsService {
       headers: this.getAuthHeaders()
     };
     
-    console.log('Making HTTP request with headers:', options.headers);
-    
     return this.http.get<Consultation[]>(`${this.baseUrl}/view-mh/${patientId}`, options).pipe(
       tap(consultations => {
-        console.log('Received consultations:', consultations);
         this.consultationsCache.set(patientId, consultations);
         this.loadingSubject.next(false);
       }),
@@ -114,45 +107,7 @@ export class ConsultationRecordsService {
     );
   }
 
-  getUpcomingAppointmentId(patientId: number, date: string): Observable<number> {
-    console.log('Fetching upcoming appointment for patient:', patientId, 'on date:', date);
-    
-    const options = {
-      headers: this.getAuthHeaders(),
-      params: {
-        patientId: patientId.toString(),
-        date: date
-      }
-    };
-    
-    return this.http.get<number>(`${this.baseUrl}/upcoming`, options).pipe(
-      tap(appointmentId => {
-        console.log('Received upcoming appointment ID:', appointmentId);
-      }),
-      catchError(error => {
-        console.error('Error fetching upcoming appointment:', error);
-        return this.handleError(error);
-      })
-    );
-  }
 
-  getPatientByPhone(phone: number): Observable<number> {
-    console.log('Fetching patient ID for phone number:', phone);
-    
-    const options = {
-      headers: this.getAuthHeaders()
-    };
-    
-    return this.http.get<number>(`${this.baseUrl}/get-patient-id/by-phone/${phone}`, options).pipe(
-      tap(patientId => {
-        console.log('Received patient ID:', patientId);
-      }),
-      catchError(error => {
-        console.error('Error fetching patient by phone:', error);
-        return this.handleError(error);
-      })
-    );
-  }
 
   clearPatientCache(patientId: number): void {
     this.consultationsCache.delete(patientId);

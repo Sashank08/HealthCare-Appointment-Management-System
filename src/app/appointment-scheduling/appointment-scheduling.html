@@ -29,17 +29,29 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Patient ID <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="patientId" placeholder="Enter Patient ID" ngModel required>
+              <input type="number" class="form-control" name="patientId" 
+                     [(ngModel)]="patientId" 
+                     placeholder="Enter Patient ID" 
+                     [readonly]="patientId > 0"
+                     required>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Patient Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="patientName" placeholder="Enter Patient Name" ngModel required>
+              <input type="text" class="form-control" name="patientName" 
+                     [(ngModel)]="patientName" 
+                     placeholder="Enter Patient Name" 
+                     [readonly]="patientName !== ''"
+                     required>
             </div>
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Patient Email <span class="text-danger">*</span></label>
-              <input type="email" class="form-control" name="patientEmail" placeholder="Enter Patient Email" ngModel required>
+              <input type="email" class="form-control" name="patientEmail" 
+                     [(ngModel)]="patientEmail" 
+                     placeholder="Enter Patient Email" 
+                     [readonly]="patientEmail !== ''"
+                     required>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">

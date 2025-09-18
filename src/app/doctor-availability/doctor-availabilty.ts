@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
  
 export interface Availability {
   doctorID: number;
@@ -61,18 +62,7 @@ export class AvailabilityService {
     return this.http.get<Appointment[]>(`http://localhost:8081/appointments/doctor/${doctorId}`, { headers });
   }
 
-  rescheduleAppointment(appointmentId: number, newDate: string, newSlot: string): Observable<any> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.put(`http://localhost:8081/appointments/update/${appointmentId}`, 
-      { date: newDate, slot: newSlot }, { headers });
-  }
 
-  cancelAppointment(appointmentId: number): Observable<any> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.delete(`http://localhost:8081/appointments/cancel/${appointmentId}`, { headers });
-  }
 }
  
 @Component({
@@ -113,14 +103,9 @@ export class DoctorAvailabilty {
   updateDate = '';
   updateSelectedTimeSlots: string[] = [];
 
-  // Reschedule appointment properties
-  selectedAppointment: Appointment | null = null;
-  showRescheduleModal = false;
-  rescheduleDate = '';
-  rescheduleSlot = '';
-  availableRescheduleSlots: string[] = [];
+
  
-  constructor(private availabilityService: AvailabilityService, private http: HttpClient, private router: Router) {
+  constructor(private availabilityService: AvailabilityService, private http: HttpClient, private router: Router, private authService: AuthService) {
     this.doctorID = 1;
     this.searchDoctorID = 1;
     this.currentUserId = 1;
@@ -141,7 +126,6 @@ export class DoctorAvailabilty {
             patientName: `Patient #${apt.patientId}`,
             status: this.getAppointmentStatus(apt.slot)
           }));
-          console.log('Loaded appointments:', this.appointments);
         },
         error: (error) => {
           console.error('Error loading appointments:', error);
@@ -184,51 +168,14 @@ export class DoctorAvailabilty {
     }
   }
 
-  private fetchCorrectUserId() {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const phoneNumber = payload.phone || '9888348920';
-        
-        if (phoneNumber) {
-          const headers = { 'Authorization': `Bearer ${token}` };
-          
-          this.http.get<any>(`http://localhost:8081/auth/by-phone/${phoneNumber}`, { headers }).subscribe({
-            next: (userData) => {
-              if (userData) {
-                this.currentUserId = userData.id;
-                this.doctorID = userData.id;
-                this.searchDoctorID = userData.id;
-                this.doctorName = userData.name || payload.name || `Dr. ${userData.id}`;
-                this.specialty = userData.specialisation || 'Cardiology';
-                console.log('User data from phone API:', userData);
-                
-                // Load appointments with correct doctor ID
-                setTimeout(() => {
-                  this.loadAppointments();
-                }, 500);
-              }
-            },
-            error: (error) => {
-              console.error('Error fetching user data by phone:', error);
-              // Fallback to JWT data and generated ID
-              this.doctorName = payload.name || 'Dr. Atul Sahu';
-              this.specialty = 'Cardiology';
-              this.currentUserId = this.generateIdFromEmail(payload.sub || payload.email);
-              this.doctorID = this.currentUserId;
-              this.searchDoctorID = this.currentUserId;
-              
-              setTimeout(() => {
-                this.loadAppointments();
-              }, 500);
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error parsing JWT token:', error);
-      }
-    }
+    private fetchCorrectUserId() {
+    // This method is no longer needed since we get the correct ID directly from JWT token
+    // The ID is already set in initializeUserRole() method
+    
+    // Load appointments with the correct doctor ID from token
+    setTimeout(() => {
+      this.loadAppointments();
+    }, 500);
   }
 
   private initializeUserRole() {
@@ -238,32 +185,53 @@ export class DoctorAvailabilty {
         const payload = JSON.parse(atob(token.split('.')[1]));
         this.userRole = payload.role || payload.user_type;
         
-        // Generate consistent ID from email for now
-        const userEmail = payload.sub || payload.email;
-        if (userEmail) {
-          this.currentUserId = this.generateIdFromEmail(userEmail);
-        }
-        
+        // Use actual ID from JWT token
+        this.currentUserId = payload.id || payload.userId || 0;
         this.doctorID = this.currentUserId;
         this.searchDoctorID = this.currentUserId;
-        this.doctorName = payload.name || 'Dr. Atul Sahu';
+        this.doctorName = payload.name || payload.sub || 'Doctor';
         
-        console.log('User role:', this.userRole, 'User ID:', this.currentUserId, 'Doctor ID set to:', this.doctorID);
+        // Load doctor's specialization if user is a doctor
+        if (this.userRole === 'DOCTOR') {
+          this.loadDoctorSpecialization();
+        }
       } catch (error) {
         console.error('Error parsing token:', error);
       }
     }
   }
 
-  private generateIdFromEmail(email: string): number {
-    let hash = 0;
-    for (let i = 0; i < email.length; i++) {
-      const char = email.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash % 90000) + 10000;
+  private loadDoctorSpecialization() {
+    const token = this.authService.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userEmail = payload.sub || payload.email;
+        
+        if (userEmail && userEmail.trim() !== '') {
+          this.authService.getUserByEmail(userEmail).subscribe({
+            next: (doctor) => {
+              if (doctor && doctor.specialisation) {
+                this.specialty = doctor.specialisation;
+              } else {
+                this.specialty = 'General Medicine';
+              }
+            },
+            error: (error) => {
+              this.specialty = 'General Medicine';
+            }
+          });
+        } else {
+          this.specialty = 'General Medicine';
+        }
+      } catch (error) {
+        console.error('Error parsing JWT token for specialization:', error);
+        this.specialty = 'General Medicine';
   }
+    }
+  }
+
+
 
   canManageAvailability(): boolean {
     return this.userRole === 'DOCTOR';
@@ -295,7 +263,6 @@ export class DoctorAvailabilty {
     this.http.get<any>(`http://localhost:8081/auth/by-phone/${phone}`).subscribe({
       next: (userData) => {
         if (userData) {
-          console.log('Doctor info:', userData);
           this.showMessage(`👨‍⚕️ Found: Dr. ${userData.name} (ID: ${userData.id})`, 'success');
           
           if (userData.user_type === 'DOCTOR') {
@@ -645,71 +612,7 @@ export class DoctorAvailabilty {
     return titles[type as keyof typeof titles] || 'Notification';
   }
 
-  // Reschedule appointment methods
-  openRescheduleModal(appointment: Appointment) {
-    this.selectedAppointment = appointment;
-    this.rescheduleDate = appointment.date;
-    this.rescheduleSlot = appointment.slot;
-    this.availableRescheduleSlots = this.generateTimeSlots();
-    this.showRescheduleModal = true;
-  }
 
-  closeRescheduleModal() {
-    this.showRescheduleModal = false;
-    this.selectedAppointment = null;
-    this.rescheduleDate = '';
-    this.rescheduleSlot = '';
-  }
-
-  onRescheduleSubmit() {
-    if (!this.selectedAppointment || !this.rescheduleDate || !this.rescheduleSlot) {
-      this.showMessage('Please fill all required fields', 'error');
-      return;
-    }
-
-    if (new Date(this.rescheduleDate) < new Date(new Date().toDateString())) {
-      this.showMessage('Reschedule date cannot be in the past', 'error');
-      return;
-    }
-
-    this.isSubmitting = true;
-    this.availabilityService.rescheduleAppointment(
-      this.selectedAppointment.id, 
-      this.rescheduleDate, 
-      this.rescheduleSlot
-    ).subscribe({
-      next: () => {
-        this.showCustomAlert('success', 'Appointment Rescheduled', 
-          `Appointment successfully moved to ${this.rescheduleDate} at ${this.rescheduleSlot}`);
-        this.closeRescheduleModal();
-        this.loadAppointments();
-      },
-      error: (error) => {
-        console.error('Reschedule error:', error);
-        this.showMessage('Failed to reschedule appointment. Please try again.', 'error');
-      },
-      complete: () => this.isSubmitting = false
-    });
-  }
-
-  // Cancel appointment method
-  cancelAppointment(appointment: Appointment) {
-    const confirmMessage = `Are you sure you want to cancel this appointment?\n\nPatient: ${appointment.patientName}\nDate: ${appointment.date}\nTime: ${appointment.slot}\n\nThis action cannot be undone.`;
-    
-    if (!confirm(confirmMessage)) return;
-
-    this.availabilityService.cancelAppointment(appointment.id).subscribe({
-      next: () => {
-        this.showCustomAlert('success', 'Appointment Cancelled', 
-          `Appointment for ${appointment.date} at ${appointment.slot} has been cancelled`);
-        this.loadAppointments();
-      },
-      error: (error) => {
-        console.error('Cancel error:', error);
-        this.showMessage('Failed to cancel appointment. Please try again.', 'error');
-      }
-    });
-  }
 
 
 }

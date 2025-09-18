@@ -34,9 +34,15 @@ export class AppointmentScheduling {
   selectedAppointmentForCancel: Appointment | null = null;
   showUpdateForm: boolean = false;
   showCancelForm: boolean = false;
-  updateFormData: any = {};
+    updateFormData: any = {};
   cancelFormData: any = {};
- 
+  
+  // Patient autofill data
+  patientId: number = 0;
+  patientName: string = '';
+  patientEmail: string = '';
+  userRole: string | null = null;
+
   timeSlots = [
     { value: '09:00-10:00', label: '09:00 AM - 10:00 AM', startTime: '09:00', endTime: '10:00' },
     { value: '10:00-11:00', label: '10:00 AM - 11:00 AM', startTime: '10:00', endTime: '11:00' },
@@ -47,18 +53,35 @@ export class AppointmentScheduling {
   ];
  
   constructor(private appointmentService: AppointmentService, private authService: AuthService) {
+    this.loadPatientInfoFromToken();
     this.loadPatientAppointmentsOnLogin();
   }
 
-  loadPatientAppointmentsOnLogin(): void {
-    this.appointmentService.getCurrentPatientId().subscribe({
-      next: (patientId) => {
-        this.loadPatientAppointments(patientId);
-      },
-      error: (error) => {
-        console.error('Error getting patient ID:', error);
+  loadPatientInfoFromToken(): void {
+    const token = this.authService.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        
+        this.userRole = payload.role || payload.user_type;
+        
+        // Only autofill if user is a patient
+        if (this.userRole === 'PATIENT') {
+          this.patientId = payload.id || payload.userId || 0;
+          this.patientName = payload.name || '';
+          this.patientEmail = payload.sub || payload.email || '';
+        }
+      } catch (error) {
+        console.error('Error parsing JWT token for patient info:', error);
       }
-    });
+    }
+  }
+
+  loadPatientAppointmentsOnLogin(): void {
+    // Use patient ID from token if available
+    if (this.patientId > 0) {
+      this.loadPatientAppointments(this.patientId);
+    }
   }
 
   extractPatientIdFromToken(token: string): number | null {
@@ -79,15 +102,56 @@ export class AppointmentScheduling {
       },
       error: (error) => {
         console.error('Full error details:', error);
+        
+        // Handle specific error cases with user-friendly messages
         if (error.status === 0) {
-          this.errorMessage = 'Cannot connect to backend. Check if backend is running on port 8082.';
+          this.errorMessage = 'Cannot connect to server. Please check your internet connection.';
+        } else if (error.status === 400) {
+          // Handle SlotAlreadyBookedException and other validation errors
+          const errorMessage = error.error?.message || error.error || 'Invalid request data';
+          if (errorMessage.includes('already booked') || errorMessage.includes('SlotAlreadyBooked')) {
+            this.errorMessage = 'Sorry, this time slot has already been booked by another patient. Please select a different time slot.';
+          } else if (errorMessage.includes('unavailable') || errorMessage.includes('DoctorUnavailable')) {
+            this.errorMessage = 'The doctor is not available at the selected time. Please choose another time slot.';
+          } else {
+            this.errorMessage = errorMessage;
+          }
         } else if (error.status === 404) {
-          this.errorMessage = 'Backend endpoint not found. Check URL.';
+          this.errorMessage = 'Service not available. Please try again later.';
+        } else if (error.status === 409) {
+          // Conflict - typically used for slot already booked
+          this.errorMessage = 'This time slot is no longer available. Please select a different time slot.';
         } else if (error.status === 500) {
-          this.errorMessage = 'Backend server error: ' + (error.error?.message || 'Internal server error');
+          // Check if it's a specific business logic error from backend
+          const backendMessage = error.error?.message || error.error;
+          if (backendMessage && typeof backendMessage === 'string') {
+            if (backendMessage.includes('already booked') || backendMessage.includes('SlotAlreadyBooked')) {
+              this.errorMessage = 'This time slot has already been taken by another patient. Please choose a different time slot.';
+            } else if (backendMessage.includes('unavailable') || backendMessage.includes('DoctorUnavailable')) {
+              this.errorMessage = 'The doctor is not available at this time. Please select another time slot.';
+            } else {
+              this.errorMessage = backendMessage;
+            }
+          } else {
+            this.errorMessage = 'Unable to process your appointment request. Please check your details and try again.';
+          }
         } else {
-          this.errorMessage = `Error ${error.status}: ${error.error?.message || 'Failed to book appointment'}`;
+          // Fallback to backend message if available
+          const backendMessage = error.error?.message || error.error;
+          if (backendMessage && typeof backendMessage === 'string') {
+            this.errorMessage = backendMessage;
+          } else {
+            this.errorMessage = 'Failed to book appointment. Please try again.';
+          }
         }
+        
+        // Scroll to show error message
+        setTimeout(() => {
+          const errorElement = document.querySelector('.alert-danger');
+          if (errorElement) {
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
       }
     });
   }
@@ -111,27 +175,40 @@ export class AppointmentScheduling {
  
   cancelAppointment(id: number, cancelInfo: AppointmentCancelInfo): void {
     this.clearMessages();
-    console.log('Cancelling appointment ID:', id, 'with info:', cancelInfo);
     this.appointmentService.cancelAppointment(id, cancelInfo).subscribe({
       next: (response) => {
-        console.log('Cancel response:', response);
         alert('Appointment Cancelled Successfully!');
         this.appointments = this.appointments.filter(a => a.id !== id);
       },
       error: (error) => {
         console.error('Full cancel error details:', error);
         if (error.status === 0) {
-          this.errorMessage = 'Cannot connect to backend. Check if backend is running on port 8082.';
+          this.errorMessage = 'Cannot connect to server. Please check your internet connection.';
         } else if (error.status === 404) {
-          this.errorMessage = 'Appointment not found with the provided ID.';
+          this.errorMessage = 'Appointment not found. It may have already been cancelled.';
+        } else if (error.status === 400) {
+          const errorMessage = error.error?.message || error.error || 'Invalid request';
+          this.errorMessage = errorMessage;
         } else if (error.status === 500) {
-          this.errorMessage = 'Backend server error: ' + (error.error?.message || 'Internal server error');
+          // Check for specific backend error messages
+          const backendMessage = error.error?.message || error.error;
+          if (backendMessage && typeof backendMessage === 'string') {
+            this.errorMessage = backendMessage;
+          } else {
+            this.errorMessage = 'Unable to cancel the appointment. Please try again or contact support.';
+          }
         } else if (error.status === 200 || error.status === 204) {
           // Sometimes DELETE requests return 200/204 but Angular treats as error
           alert('Appointment Cancelled Successfully!');
           this.appointments = this.appointments.filter(a => a.id !== id);
         } else {
-          this.errorMessage = `Error ${error.status}: ${error.error?.message || 'Failed to cancel appointment'}`;
+          // Use backend message if available
+          const backendMessage = error.error?.message || error.error;
+          if (backendMessage && typeof backendMessage === 'string') {
+            this.errorMessage = backendMessage;
+          } else {
+            this.errorMessage = 'Failed to cancel appointment. Please try again.';
+          }
         }
       }
     });
@@ -139,14 +216,9 @@ export class AppointmentScheduling {
  
   loadPatientAppointments(patientId: number): void {
     this.clearMessages();
-    console.log('Loading appointments for patient ID:', patientId);
     this.appointmentService.getAppointmentsByPatient(patientId).subscribe({
       next: (appointments) => {
-        console.log('Received appointments:', appointments);
         this.appointments = appointments;
-        if (appointments.length === 0) {
-          console.log('No appointments found for this patient');
-        }
       },
       error: (error) => {
         console.error('Full error details:', error);
@@ -224,7 +296,6 @@ export class AppointmentScheduling {
       request.reason = formData.reason.trim();
     }
    
-    console.log('Sending request:', request);
     this.bookAppointment(request);
   }
  
@@ -410,28 +481,20 @@ export class AppointmentScheduling {
   }
 
   fetchPatientAndDoctorDetails(patientId: number, doctorId: number, formType: 'update' | 'cancel'): void {
-    // Get current user details (assuming logged in user is the patient)
-    this.appointmentService.getCurrentPatientId().subscribe({
-      next: (currentPatientId) => {
-        // For now, use placeholder data - you can enhance this with actual API calls
-        const patientName = 'Current Patient'; // Replace with actual API call
-        const patientEmail = 'patient@example.com'; // Replace with actual API call
-        const doctorName = `Doctor ${doctorId}`; // Replace with actual API call
-        
-        if (formType === 'update') {
-          this.updateFormData.patientName = patientName;
-          this.updateFormData.patientEmail = patientEmail;
-          this.updateFormData.doctorName = doctorName;
-        } else {
-          this.cancelFormData.patientName = patientName;
-          this.cancelFormData.patientEmail = patientEmail;
-          this.cancelFormData.doctorName = doctorName;
-        }
-      },
-      error: (error) => {
-        console.error('Error fetching details:', error);
-      }
-    });
+    // Use patient details from token
+    const patientName = this.patientName || 'Patient';
+    const patientEmail = this.patientEmail || '';
+    const doctorName = `Doctor ${doctorId}`; // You can enhance this with actual doctor data
+    
+    if (formType === 'update') {
+      this.updateFormData.patientName = patientName;
+      this.updateFormData.patientEmail = patientEmail;
+      this.updateFormData.doctorName = doctorName;
+    } else {
+      this.cancelFormData.patientName = patientName;
+      this.cancelFormData.patientEmail = patientEmail;
+      this.cancelFormData.doctorName = doctorName;
+    }
   }
 
   showSuccessPopup(title: string, message: string): void {

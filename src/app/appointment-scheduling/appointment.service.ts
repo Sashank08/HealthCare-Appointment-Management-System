@@ -72,16 +72,7 @@ export class AppointmentService {
   constructor(private http: HttpClient, private authService: AuthService) {}
  
   bookAppointment(request: AppointmentRequest): Observable<Appointment> {
-    return this.http.post<Appointment>(`${this.baseUrl}/book`, request, this.getHttpOptions()).pipe(
-      catchError(error => {
-        if (error.status === 500) {
-          // Appointment saved but backend returned error - treat as success
-          console.log('Appointment saved despite backend error');
-          return of({ id: Date.now(), ...request } as Appointment);
-        }
-        throw error;
-      })
-    );
+    return this.http.post<Appointment>(`${this.baseUrl}/book`, request, this.getHttpOptions());
   }
  
   updateAppointment(id: number, request: AppointmentUpdateRequest): Observable<Appointment> {
@@ -122,10 +113,6 @@ export class AppointmentService {
     );
   }
 
-  getCurrentPatientId(): Observable<number> {
-    return this.http.get<{id: number}>(`http://localhost:8081/auth/current-user`, this.getHttpOptions()).pipe(
-      map(user => user.id)
-    );
-  }
+
 }
  

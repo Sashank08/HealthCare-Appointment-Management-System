@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { ConsultationRecordsService, Consultation } from '../services/consultation-records';
+import { AvailabilityService, Appointment } from '../doctor-availability/doctor-availabilty';
 
 @Component({
   selector: 'app-consultation-records',
@@ -13,29 +14,31 @@ import { ConsultationRecordsService, Consultation } from '../services/consultati
 export class ConsultationRecordsComponent implements OnInit, OnDestroy {
   private consultationService = inject(ConsultationRecordsService);
   private formBuilder = inject(FormBuilder);
+  private availabilityService = inject(AvailabilityService);
   private destroy$ = new Subject<void>();
 
   consultationForm: FormGroup;
-  upcomingAppointmentForm: FormGroup;
-  patientByPhoneForm: FormGroup;
   
   consultations: Consultation[] = [];
   selectedPatientId: number | null = null;
-  upcomingAppointmentId: number | null = null;
-  patientIdFromPhone: number | null = null;
+  
+  // Doctor appointments for autofill
+  doctorAppointments: Appointment[] = [];
+  selectedAppointment: Appointment | null = null;
+  currentDoctorId: number = 0;
+  
+  // User role detection
+  userRole: string | null = null;
+  isDoctor: boolean = false;
+  isPatient: boolean = false;
+  currentPatientId: number = 0;
   
   errorMessage = '';
   successMessage = '';
-  upcomingAppointmentError = '';
-  upcomingAppointmentSuccess = '';
-  patientByPhoneError = '';
-  patientByPhoneSuccess = '';
   
   showAddForm = false;
   isLoading = false;
   isSubmitting = false;
-  isLoadingUpcomingAppointment = false;
-  isLoadingPatientByPhone = false;
 
   ngOnInit(): void {
     this.consultationForm = this.formBuilder.group({
@@ -43,15 +46,6 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
       prescription: ['', [Validators.required, Validators.maxLength(1000)]],
       appointmentId: ['', [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
       patientId: ['', [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]]
-    });
-
-    this.upcomingAppointmentForm = this.formBuilder.group({
-      patientId: ['', [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
-      date: ['', [Validators.required]]
-    });
-
-    this.patientByPhoneForm = this.formBuilder.group({
-      phone: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]]
     });
 
     this.consultationService.loading$
@@ -65,6 +59,21 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
     this.consultationForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.clearMessages());
+
+    // Load user info and initialize based on role
+    this.loadCurrentDoctorInfo();
+    this.initializeForUserRole();
+  }
+
+  initializeForUserRole(): void {
+    // For patients, automatically load their medical history
+    // For doctors, they need to manually search for patient records
+    if (this.isPatient && this.currentPatientId > 0) {
+      // Auto-load patient's own medical history
+      setTimeout(() => {
+        this.viewMedicalHistory(this.currentPatientId, false);
+      }, 500);
+    }
   }
 
   ngOnDestroy(): void {
@@ -163,73 +172,61 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
     }
   }
 
-  getUpcomingAppointment(): void {
-    if (this.upcomingAppointmentForm.valid) {
-      this.clearUpcomingAppointmentMessages();
-      this.isLoadingUpcomingAppointment = true;
-      
-      const { patientId, date } = this.upcomingAppointmentForm.value;
-      
-      this.consultationService.getUpcomingAppointmentId(patientId, date)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (appointmentId) => {
-            this.upcomingAppointmentId = appointmentId;
-            this.upcomingAppointmentSuccess = `Upcoming appointment ID: ${appointmentId}`;
-            this.isLoadingUpcomingAppointment = false;
-          },
-          error: (error) => {
-            this.upcomingAppointmentError = error.message;
-            this.upcomingAppointmentId = null;
-            this.isLoadingUpcomingAppointment = false;
-          }
-        });
-    } else {
-      this.markFormGroupTouchedByName('upcomingAppointmentForm');
-      this.upcomingAppointmentError = 'Please fill in all required fields correctly.';
-    }
-  }
-
-  getPatientByPhone(): void {
-    if (this.patientByPhoneForm.valid) {
-      this.clearPatientByPhoneMessages();
-      this.isLoadingPatientByPhone = true;
-      
-      const { phone } = this.patientByPhoneForm.value;
-      
-      this.consultationService.getPatientByPhone(phone)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (patientId) => {
-            this.patientIdFromPhone = patientId;
-            this.patientByPhoneSuccess = `Patient ID: ${patientId}`;
-            this.isLoadingPatientByPhone = false;
-          },
-          error: (error) => {
-            this.patientByPhoneError = error.message;
-            this.patientIdFromPhone = null;
-            this.isLoadingPatientByPhone = false;
-          }
-        });
-    } else {
-      this.markFormGroupTouchedByName('patientByPhoneForm');
-      this.patientByPhoneError = 'Please enter a valid phone number (10-15 digits).';
-    }
-  }
-
   clearMessages(): void {
     this.errorMessage = '';
     this.successMessage = '';
   }
 
-  clearUpcomingAppointmentMessages(): void {
-    this.upcomingAppointmentError = '';
-    this.upcomingAppointmentSuccess = '';
+  loadCurrentDoctorInfo(): void {
+    // Get user info from JWT token
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        this.userRole = payload.role || payload.user_type;
+        this.isDoctor = this.userRole === 'DOCTOR';
+        this.isPatient = this.userRole === 'PATIENT';
+        
+        // Handle role-specific initialization
+        if (this.isDoctor) {
+          this.currentDoctorId = payload.id || payload.userId || 0;
+          
+          if (this.currentDoctorId > 0) {
+            this.loadDoctorAppointments();
+          }
+        } else if (this.isPatient) {
+          this.currentPatientId = payload.id || payload.userId || 0;
+        }
+      } catch (error) {
+        console.error('Error parsing JWT token:', error);
+      }
+    }
   }
 
-  clearPatientByPhoneMessages(): void {
-    this.patientByPhoneError = '';
-    this.patientByPhoneSuccess = '';
+  loadDoctorAppointments(): void {
+    this.availabilityService.getAppointmentsByDoctor(this.currentDoctorId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (appointments) => {
+          this.doctorAppointments = appointments;
+        },
+        error: (error) => {
+          console.error('Error loading doctor appointments:', error);
+        }
+      });
+  }
+
+  onAppointmentSelect(appointmentId: string): void {
+    const selectedId = parseInt(appointmentId, 10);
+    this.selectedAppointment = this.doctorAppointments.find(apt => apt.id === selectedId) || null;
+    
+    if (this.selectedAppointment) {
+      // Autofill appointment ID and patient ID
+      this.consultationForm.patchValue({
+        appointmentId: this.selectedAppointment.id,
+        patientId: this.selectedAppointment.patientId
+      });
+    }
   }
 
   trackByConsultationId(index: number, consultation: Consultation): number {
@@ -242,49 +239,12 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
     });
   }
 
-  private markFormGroupTouchedByName(formName: string): void {
-    let targetForm: FormGroup;
-    
-    switch(formName) {
-      case 'upcomingAppointmentForm':
-        targetForm = this.upcomingAppointmentForm;
-        break;
-      case 'patientByPhoneForm':
-        targetForm = this.patientByPhoneForm;
-        break;
-      default:
-        targetForm = this.consultationForm;
-    }
-    
-    Object.keys(targetForm.controls).forEach(key => {
-      targetForm.get(key)?.markAsTouched();
-    });
-  }
-
   get f() {
     return this.consultationForm.controls;
   }
 
-  get upcomingF() {
-    return this.upcomingAppointmentForm.controls;
-  }
-
-  get phoneF() {
-    return this.patientByPhoneForm.controls;
-  }
-
   hasError(fieldName: string): boolean {
     const field = this.consultationForm.get(fieldName);
-    return !!(field && field.invalid && (field.dirty || field.touched));
-  }
-
-  hasUpcomingError(fieldName: string): boolean {
-    const field = this.upcomingAppointmentForm.get(fieldName);
-    return !!(field && field.invalid && (field.dirty || field.touched));
-  }
-
-  hasPhoneError(fieldName: string): boolean {
-    const field = this.patientByPhoneForm.get(fieldName);
     return !!(field && field.invalid && (field.dirty || field.touched));
   }
 
