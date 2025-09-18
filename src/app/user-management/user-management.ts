@@ -820,11 +820,10 @@ export class UserManagementComponent implements OnInit {
   }
 
   loadDoctorProfile() {
-    // Use phone number from JWT or fallback to known doctor phone
-    const phoneToSearch = this.userPhone || '9888348920';
-    
-    if (phoneToSearch) {
-      this.authService.getUserByPhone(phoneToSearch).subscribe({
+    // Only try to fetch from backend if we have a valid phone number from JWT
+    if (this.userPhone && this.userPhone.trim() !== '') {
+      console.log('Loading doctor profile for phone:', this.userPhone);
+      this.authService.getUserByPhone(this.userPhone).subscribe({
         next: (doctor) => {
           if (doctor) {
             // Update user info with real database data
@@ -839,27 +838,28 @@ export class UserManagementComponent implements OnInit {
               qualification: 'MBBS, MD'
             };
             
-            console.log('Doctor profile loaded by phone:', doctor);
+            console.log('Doctor profile loaded successfully:', doctor);
           }
         },
         error: (error) => {
-          console.error('Error loading doctor profile by phone:', error);
-          // Fallback to JWT data
-          this.doctorProfile = {
-            specialization: 'Cardiology',
-            experience: '5+ years',
-            qualification: 'MBBS, MD'
-          };
+          console.log('Could not load doctor profile from backend, using default values');
+          // Use default values - this is normal if the endpoint doesn't exist for doctors
+          this.setDefaultDoctorProfile();
         }
       });
     } else {
-      // Fallback to default values
-      this.doctorProfile = {
-        specialization: 'Cardiology',
-        experience: '5+ years',
-        qualification: 'MBBS, MD'
-      };
+      console.log('No phone number available in JWT, using default doctor profile');
+      // Use default values when no phone number is available
+      this.setDefaultDoctorProfile();
     }
+  }
+
+  private setDefaultDoctorProfile() {
+    this.doctorProfile = {
+      specialization: 'General Medicine',
+      experience: '5+ years',
+      qualification: 'MBBS, MD'
+    };
   }
 
   getAppointmentStatus(slot: string): string {
