@@ -88,23 +88,18 @@ export class DoctorAvailabilty {
   private fetchCorrectUserId() {
     const token = localStorage.getItem('authToken');
     if (token) {
-      const headers = { 'Authorization': `Bearer ${token}` };
-      
-      setTimeout(() => {
-        this.http.get<any>('http://localhost:8081/auth/by-phone/9888348911', { headers }).subscribe({
-          next: (userData) => {
-            if (userData) {
-              this.currentUserId = userData.id;
-              this.doctorID = userData.id;
-              this.searchDoctorID = userData.id;
-              console.log('Correct user ID from API:', userData.id);
-            }
-          },
-          error: (error) => {
-            console.error('Error fetching correct user ID:', error);
-          }
-        });
-      }, 100);
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        this.currentUserId = payload.userId || payload.id || 1;
+        this.doctorID = this.currentUserId;
+        this.searchDoctorID = this.currentUserId;
+        console.log('User ID from token:', this.currentUserId);
+      } catch (error) {
+        console.error('Error extracting user ID from token:', error);
+        this.currentUserId = 1;
+        this.doctorID = 1;
+        this.searchDoctorID = 1;
+      }
     }
   }
 
@@ -344,10 +339,11 @@ export class DoctorAvailabilty {
       },
       error: (error) => {
         if (error.status === 409) {
-          this.showMessage('⚠️ Availability already exists for this doctor on this date. Please choose a different date or update the existing schedule.', 'warning');
+          this.showMessage('⚠️ Schedule already exists for this date. Please choose a different date or update the existing availability.', 'warning');
         } else {
           this.showMessage('❌ Failed to add availability. Please try again.', 'error');
         }
+        this.isSubmitting = false;
       },
       complete: () => this.isSubmitting = false
     });

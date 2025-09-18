@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,6 +7,7 @@ import { ConsultationRecordsComponent } from '../consultation-records/consultati
 import { ConsultationRecordsService } from '../services/consultation-records';
 import { AppointmentScheduling } from '../appointment-scheduling/appointment-scheduling';
 import { DoctorAvailabilty } from '../doctor-availability/doctor-availabilty';
+import { AppointmentService } from '../appointment-scheduling/appointment.service';
 
 @Component({
   selector: 'app-user-management',
@@ -15,7 +16,7 @@ import { DoctorAvailabilty } from '../doctor-availability/doctor-availabilty';
   templateUrl: './user-management.html',
   styleUrl: './user-management.css'
 })
-export class UserManagementComponent {
+export class UserManagementComponent implements OnInit {
   currentView = 'login';
   userName = 'John Doe';
   registrationSuccess = false;
@@ -24,6 +25,27 @@ export class UserManagementComponent {
   userPhone = '';
   userAge = 0;
   userId = 0;
+  showLoginPassword = false;
+  showDoctorPassword = false;
+  doctorStats = {
+    totalPatients: 0,
+    todayAppointments: 0,
+    weeklyConsultations: 0,
+    rating: 0
+  };
+  
+  patientHealthSummary = {
+    lastVisit: null as any,
+    currentMedications: [] as any[],
+    vitalSigns: null as any
+  };
+  
+  todaysSchedule: any[] = [];
+  doctorProfile: any = {
+    specialization: '',
+    experience: '',
+    qualification: ''
+  };
   
   // Validation properties
   loginData = {
@@ -49,7 +71,29 @@ export class UserManagementComponent {
     }
   };
 
-  constructor(private authService: AuthService, private consultationService: ConsultationRecordsService, private router: Router) {}
+  constructor(private authService: AuthService, private consultationService: ConsultationRecordsService, private router: Router, private appointmentService: AppointmentService) {}
+
+  ngOnInit() {
+    this.checkExistingAuth();
+  }
+
+  checkExistingAuth() {
+    const token = this.authService.getToken();
+    if (token) {
+      const role = this.authService.extractRoleFromToken(token);
+      this.userName = this.authService.extractUserNameFromToken(token) || 'User';
+      this.userRole = role;
+      this.extractUserInfoFromToken(token);
+      
+      if (role === 'DOCTOR' || role === 'ADMIN') {
+        this.loadDoctorStats();
+        this.currentView = 'doctor-dashboard';
+      } else if (role === 'PATIENT') {
+        this.loadPatientHealthSummary();
+        this.currentView = 'dashboard';
+      }
+    }
+  }
   
   registrationData = {
     fullName: '',
@@ -127,6 +171,8 @@ export class UserManagementComponent {
           }
           
           if (this.canAccessDoctorDashboard()) {
+            this.loadDoctorStats();
+            this.loadDoctorProfile(); // Ensure doctor profile is loaded
             this.currentView = 'doctor-dashboard';
             this.scrollToDoctorDashboard();
           }
@@ -176,8 +222,8 @@ export class UserManagementComponent {
       const userData = {
         name: this.registrationData.fullName,
         userEmail: this.registrationData.email,
-        phone: parseInt(this.registrationData.phone),
-        age: age,
+        phone: this.registrationData.phone,
+        age: age.toString(),
         password: this.registrationData.password,
         role: 'PATIENT'
       };
@@ -193,6 +239,8 @@ export class UserManagementComponent {
               next: (token) => {
                 this.authService.saveToken(token);
                 this.userRole = this.authService.extractRoleFromToken(token);
+                this.userName = this.authService.extractUserNameFromToken(token) || this.registrationData.fullName;
+                this.extractUserInfoFromToken(token);
                 this.currentView = 'dashboard';
                 this.scrollToDashboard();
               },
@@ -205,7 +253,11 @@ export class UserManagementComponent {
         },
         error: (error) => {
           console.error('Registration error details:', error);
-          this.validationErrors.registration.email = 'Registration failed: ' + (error.error?.message || error.message);
+          if (error.message.includes('Cannot connect to backend')) {
+            this.validationErrors.registration.email = 'Cannot connect to backend server. Please ensure the backend is running on port 8081.';
+          } else {
+            this.validationErrors.registration.email = 'Registration failed: ' + error.message;
+          }
         }
       });
     }
@@ -222,6 +274,14 @@ export class UserManagementComponent {
           this.userName = this.authService.extractUserNameFromToken(token) || 'Patient';
           this.userEmail = this.loginData.email;
           this.extractUserInfoFromToken(token);
+          // Ensure email is preserved if not in token
+          if (!this.userEmail) {
+            this.userEmail = this.loginData.email;
+          }
+          // Generate patient ID if not set
+          if (this.userId === 0 && this.userEmail) {
+            this.userId = this.generatePatientId(this.userEmail);
+          }
           
           // Try to get user data by email if phone not available
           if (!this.userPhone && this.userEmail) {
@@ -229,15 +289,19 @@ export class UserManagementComponent {
           }
           
           if (this.canAccessPatientDashboard()) {
+            this.loadPatientHealthSummary();
             this.currentView = 'dashboard';
             this.scrollToDashboard();
           }
         },
         error: (error) => {
-          if (error.status === 401) {
+          console.error('Login error:', error);
+          if (error.status === 0) {
+            this.validationErrors.login.email = 'Cannot connect to backend. Check if backend is running on port 8081.';
+          } else if (error.status === 401) {
             this.validationErrors.login.email = 'Invalid email or password. Please check your credentials.';
           } else {
-            this.validationErrors.login.email = 'Login failed. Please try again.';
+            this.validationErrors.login.email = 'Login failed: ' + (error.error || error.message || 'Please try again.');
           }
         }
       });
@@ -258,9 +322,11 @@ export class UserManagementComponent {
     this.currentView = 'consultation-records';
     this.scrollToConsultationRecords();
     
-    // Auto-load medical history for patient ID 1 (demo)
+    // Auto-load medical history for current patient
     setTimeout(() => {
-      this.loadMedicalHistoryForPatient(1);
+      if (this.userId > 0) {
+        this.loadMedicalHistoryForPatient(this.userId);
+      }
     }, 1000);
   }
 
@@ -602,17 +668,33 @@ export class UserManagementComponent {
     return age;
   }
 
+  generatePatientId(email: string): number {
+    // Generate a consistent ID based on email hash
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+      const char = email.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Ensure positive number between 10000-99999
+    return Math.abs(hash % 90000) + 10000;
+  }
+
   extractUserInfoFromToken(token: string) {
     try {
+      this.userEmail = this.authService.extractUserEmailFromToken(token) || this.userEmail;
       const payload = JSON.parse(atob(token.split('.')[1]));
-      this.userId = payload.userId || payload.id || 0;
       this.userPhone = payload.phone || '';
       this.userAge = payload.age || 0;
       
-      // Fetch user data by phone to get correct ID
-      if (this.userEmail) {
-        this.fetchUserDataByPhone('9888348911');
+      // Only generate patient ID for patients, not doctors
+      if (this.userRole === 'PATIENT' && this.userEmail) {
+        this.userId = this.generatePatientId(this.userEmail);
+      } else if (this.userRole === 'DOCTOR') {
+        this.userId = 0; // Will be set from backend
       }
+      
+      console.log('Extracted user info - ID:', this.userId, 'Email:', this.userEmail, 'Phone:', this.userPhone, 'Age:', this.userAge);
     } catch (error) {
       console.error('Error extracting user info from token:', error);
     }
@@ -643,6 +725,159 @@ export class UserManagementComponent {
     console.log('Fetching user data for email:', email);
   }
 
+  loadPatientHealthSummary() {
+    if (this.userId > 0) {
+      this.consultationService.getMedicalHistory(this.userId).subscribe({
+        next: (consultations) => {
+          if (consultations && consultations.length > 0) {
+            // Get the most recent consultation
+            const lastConsultation = consultations[0];
+            this.patientHealthSummary.lastVisit = lastConsultation;
+            
+            // Extract medications from the last consultation
+            if (lastConsultation.prescription) {
+              this.patientHealthSummary.currentMedications = lastConsultation.prescription.split(',').map((med: string) => med.trim());
+            }
+            
+            // Set default vital signs (consultation records don't include vital signs)
+            this.patientHealthSummary.vitalSigns = {
+              bloodPressure: '120/80 mmHg',
+              heartRate: '72 bpm',
+              temperature: '98.6°F',
+              weight: '70 kg'
+            };
+          }
+        },
+        error: (error) => {
+          console.error('Error loading patient health summary:', error);
+        }
+      });
+    }
+  }
+
+  loadDoctorStats() {
+    // Reset stats while loading
+    this.doctorStats = {
+      totalPatients: 0,
+      todayAppointments: 0,
+      weeklyConsultations: 0,
+      rating: 0
+    };
+    
+    if (this.userId > 0) {
+      // Load doctor's appointments to calculate stats
+      this.appointmentService.getAppointmentsByDoctor(this.userId).subscribe({
+        next: (appointments) => {
+          this.calculateDoctorStats(appointments);
+        },
+        error: (error) => {
+          console.error('Error loading doctor appointments:', error);
+        }
+      });
+      
+      // Load doctor profile data from backend
+      this.loadDoctorProfile();
+    }
+  }
+
+  calculateDoctorStats(appointments: any[]) {
+    const today = new Date().toISOString().split('T')[0];
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    // Count unique patients
+    const uniquePatients = new Set(appointments.map(apt => apt.patientId));
+    this.doctorStats.totalPatients = uniquePatients.size;
+    
+    // Get today's appointments
+    const todaysAppointments = appointments.filter(apt => apt.date === today);
+    this.doctorStats.todayAppointments = todaysAppointments.length;
+    
+    // Store today's schedule
+    this.todaysSchedule = todaysAppointments.map(apt => ({
+      ...apt,
+      patientName: `Patient #${apt.patientId}`,
+      status: this.getAppointmentStatus(apt.slot)
+    }));
+    
+    // Count weekly consultations (appointments in last 7 days)
+    this.doctorStats.weeklyConsultations = appointments.filter(apt => {
+      const aptDate = new Date(apt.date);
+      return aptDate >= oneWeekAgo && aptDate <= new Date();
+    }).length;
+    
+    // Set a default rating (could be enhanced with actual rating system)
+    this.doctorStats.rating = 4.8;
+  }
+
+  loadDoctorProfile() {
+    const phoneToSearch = this.userPhone || '9888348912';
+    console.log('Loading doctor profile for phone:', phoneToSearch);
+    
+    this.authService.getUserByPhone(phoneToSearch).subscribe({
+      next: (doctor) => {
+        // Update user info with real database data
+        this.userName = doctor.name || this.userName;
+        this.userEmail = doctor.userEmail || this.userEmail;
+        this.userPhone = doctor.phone ? doctor.phone.toString() : this.userPhone;
+        this.userId = doctor.id || this.userId;
+        this.userAge = doctor.age || this.userAge;
+        
+        // Set doctor profile with real specialisation from backend
+        this.doctorProfile = {
+          specialization: (doctor as any).specialisation || 'General Medicine',
+          experience: '5+ years',
+          qualification: 'MBBS, MD'
+        };
+        
+        console.log('Doctor profile loaded from auth service:', doctor);
+        console.log('Updated userId to:', this.userId);
+        console.log('Updated userName to:', this.userName);
+      },
+      error: (error) => {
+        console.error('Error loading doctor profile:', error);
+        // Fallback to default values
+        this.doctorProfile = {
+          specialization: 'General Medicine',
+          experience: '5+ years',
+          qualification: 'MBBS, MD'
+        };
+        if (!this.userPhone) {
+          this.userPhone = '9888348912';
+        }
+      }
+    });
+  }
+
+  getAppointmentStatus(slot: string): string {
+    const now = new Date();
+    const currentTime = now.getHours() * 100 + now.getMinutes();
+    const slotTime = parseInt(slot.replace(':', ''));
+    
+    if (slotTime < currentTime - 100) {
+      return 'Completed';
+    } else if (slotTime <= currentTime + 30) {
+      return 'In Progress';
+    } else {
+      return 'Upcoming';
+    }
+  }
+
+  downloadReports() {
+    alert('Downloading your medical reports...');
+    // TODO: Implement actual report download functionality
+  }
+
+  contactDoctor() {
+    alert('Connecting you to your doctor...');
+    // TODO: Implement doctor contact functionality
+  }
+
+  refillPrescription() {
+    alert('Processing prescription refill request...');
+    // TODO: Implement prescription refill functionality
+  }
+
   logout() {
     this.authService.removeToken();
     this.currentView = 'login';
@@ -652,6 +887,12 @@ export class UserManagementComponent {
     this.userPhone = '';
     this.userAge = 0;
     this.userId = 0;
+    this.doctorStats = {
+      totalPatients: 0,
+      todayAppointments: 0,
+      weeklyConsultations: 0,
+      rating: 0
+    };
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
