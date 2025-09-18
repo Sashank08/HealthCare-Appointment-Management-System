@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { Router } from '@angular/router';
  
 export interface Availability {
   doctorID: number;
@@ -59,6 +60,19 @@ export class AvailabilityService {
     const headers = { 'Authorization': `Bearer ${token}` };
     return this.http.get<Appointment[]>(`http://localhost:8081/appointments/doctor/${doctorId}`, { headers });
   }
+
+  rescheduleAppointment(appointmentId: number, newDate: string, newSlot: string): Observable<any> {
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.put(`http://localhost:8081/appointments/update/${appointmentId}`, 
+      { date: newDate, slot: newSlot }, { headers });
+  }
+
+  cancelAppointment(appointmentId: number): Observable<any> {
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.delete(`http://localhost:8081/appointments/cancel/${appointmentId}`, { headers });
+  }
 }
  
 @Component({
@@ -98,8 +112,15 @@ export class DoctorAvailabilty {
   updateDoctorID: number | null = null;
   updateDate = '';
   updateSelectedTimeSlots: string[] = [];
+
+  // Reschedule appointment properties
+  selectedAppointment: Appointment | null = null;
+  showRescheduleModal = false;
+  rescheduleDate = '';
+  rescheduleSlot = '';
+  availableRescheduleSlots: string[] = [];
  
-  constructor(private availabilityService: AvailabilityService, private http: HttpClient) {
+  constructor(private availabilityService: AvailabilityService, private http: HttpClient, private router: Router) {
     this.doctorID = 1;
     this.searchDoctorID = 1;
     this.currentUserId = 1;
@@ -622,6 +643,87 @@ export class DoctorAvailabilty {
       warning: 'Warning'
     };
     return titles[type as keyof typeof titles] || 'Notification';
+  }
+
+  // Reschedule appointment methods
+  openRescheduleModal(appointment: Appointment) {
+    this.selectedAppointment = appointment;
+    this.rescheduleDate = appointment.date;
+    this.rescheduleSlot = appointment.slot;
+    this.availableRescheduleSlots = this.generateTimeSlots();
+    this.showRescheduleModal = true;
+  }
+
+  closeRescheduleModal() {
+    this.showRescheduleModal = false;
+    this.selectedAppointment = null;
+    this.rescheduleDate = '';
+    this.rescheduleSlot = '';
+  }
+
+  onRescheduleSubmit() {
+    if (!this.selectedAppointment || !this.rescheduleDate || !this.rescheduleSlot) {
+      this.showMessage('Please fill all required fields', 'error');
+      return;
+    }
+
+    if (new Date(this.rescheduleDate) < new Date(new Date().toDateString())) {
+      this.showMessage('Reschedule date cannot be in the past', 'error');
+      return;
+    }
+
+    this.isSubmitting = true;
+    this.availabilityService.rescheduleAppointment(
+      this.selectedAppointment.id, 
+      this.rescheduleDate, 
+      this.rescheduleSlot
+    ).subscribe({
+      next: () => {
+        this.showCustomAlert('success', 'Appointment Rescheduled', 
+          `Appointment successfully moved to ${this.rescheduleDate} at ${this.rescheduleSlot}`);
+        this.closeRescheduleModal();
+        this.loadAppointments();
+      },
+      error: (error) => {
+        console.error('Reschedule error:', error);
+        this.showMessage('Failed to reschedule appointment. Please try again.', 'error');
+      },
+      complete: () => this.isSubmitting = false
+    });
+  }
+
+  // Cancel appointment method
+  cancelAppointment(appointment: Appointment) {
+    const confirmMessage = `Are you sure you want to cancel this appointment?\n\nPatient: ${appointment.patientName}\nDate: ${appointment.date}\nTime: ${appointment.slot}\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    this.availabilityService.cancelAppointment(appointment.id).subscribe({
+      next: () => {
+        this.showCustomAlert('success', 'Appointment Cancelled', 
+          `Appointment for ${appointment.date} at ${appointment.slot} has been cancelled`);
+        this.loadAppointments();
+      },
+      error: (error) => {
+        console.error('Cancel error:', error);
+        this.showMessage('Failed to cancel appointment. Please try again.', 'error');
+      }
+    });
+  }
+
+  // Navigate to consultation
+  goToConsultation() {
+    if (this.userRole !== 'DOCTOR') {
+      this.showMessage('Access denied: Only doctors can start consultations', 'error');
+      return;
+    }
+    
+    if (!this.currentUserId) {
+      this.showMessage('Doctor ID not found. Please refresh and try again.', 'error');
+      return;
+    }
+    
+    this.router.navigate(['/app-consultation-records']);
   }
 }
  
