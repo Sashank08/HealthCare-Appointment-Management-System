@@ -2,9 +2,11 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AppointmentService, Appointment, AppointmentRequest, AppointmentUpdateRequest, AppointmentCancelInfo, UserDTO } from './appointment.service';
+import { AuthService } from '../services/auth.service';
  
 @Component({
   selector: 'app-appointment-scheduling',
+  standalone: true,
   imports: [FormsModule, CommonModule],
   templateUrl: './appointment-scheduling.html',
   styleUrl: './appointment-scheduling.css'
@@ -28,6 +30,12 @@ export class AppointmentScheduling {
   selectedDoctor: UserDTO | null = null;
   availableSlots: string[] = [];
   selectedDate: string = '';
+  selectedAppointmentForUpdate: Appointment | null = null;
+  selectedAppointmentForCancel: Appointment | null = null;
+  showUpdateForm: boolean = false;
+  showCancelForm: boolean = false;
+  updateFormData: any = {};
+  cancelFormData: any = {};
  
   timeSlots = [
     { value: '09:00-10:00', label: '09:00 AM - 10:00 AM', startTime: '09:00', endTime: '10:00' },
@@ -38,13 +46,35 @@ export class AppointmentScheduling {
     { value: '16:00-17:00', label: '04:00 PM - 05:00 PM', startTime: '16:00', endTime: '17:00' }
   ];
  
-  constructor(private appointmentService: AppointmentService) {}
+  constructor(private appointmentService: AppointmentService, private authService: AuthService) {
+    this.loadPatientAppointmentsOnLogin();
+  }
+
+  loadPatientAppointmentsOnLogin(): void {
+    this.appointmentService.getCurrentPatientId().subscribe({
+      next: (patientId) => {
+        this.loadPatientAppointments(patientId);
+      },
+      error: (error) => {
+        console.error('Error getting patient ID:', error);
+      }
+    });
+  }
+
+  extractPatientIdFromToken(token: string): number | null {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId || payload.id || null;
+    } catch (error) {
+      return null;
+    }
+  }
  
   bookAppointment(request: AppointmentRequest): void {
     this.clearMessages();
     this.appointmentService.bookAppointment(request).subscribe({
       next: (appointment) => {
-        this.successMessage = `Appointment booked successfully! ID: ${appointment.id}`;
+        alert('Appointment Booked Successfully! ID: ' + appointment.id);
         this.appointments.push(appointment);
       },
       error: (error) => {
@@ -66,7 +96,7 @@ export class AppointmentScheduling {
     this.clearMessages();
     this.appointmentService.updateAppointment(id, request).subscribe({
       next: (appointment) => {
-        this.successMessage = `Appointment updated successfully!`;
+        alert('Appointment Rescheduled Successfully!');
         const index = this.appointments.findIndex(a => a.id === id);
         if (index !== -1) {
           this.appointments[index] = appointment;
@@ -85,7 +115,7 @@ export class AppointmentScheduling {
     this.appointmentService.cancelAppointment(id, cancelInfo).subscribe({
       next: (response) => {
         console.log('Cancel response:', response);
-        this.successMessage = 'Appointment cancelled successfully!';
+        alert('Appointment Cancelled Successfully!');
         this.appointments = this.appointments.filter(a => a.id !== id);
       },
       error: (error) => {
@@ -98,7 +128,7 @@ export class AppointmentScheduling {
           this.errorMessage = 'Backend server error: ' + (error.error?.message || 'Internal server error');
         } else if (error.status === 200 || error.status === 204) {
           // Sometimes DELETE requests return 200/204 but Angular treats as error
-          this.successMessage = 'Appointment cancelled successfully!';
+          alert('Appointment Cancelled Successfully!');
           this.appointments = this.appointments.filter(a => a.id !== id);
         } else {
           this.errorMessage = `Error ${error.status}: ${error.error?.message || 'Failed to cancel appointment'}`;
@@ -114,7 +144,9 @@ export class AppointmentScheduling {
       next: (appointments) => {
         console.log('Received appointments:', appointments);
         this.appointments = appointments;
-        this.successMessage = `Loaded ${appointments.length} appointments`;
+        if (appointments.length === 0) {
+          console.log('No appointments found for this patient');
+        }
       },
       error: (error) => {
         console.error('Full error details:', error);
@@ -173,9 +205,7 @@ export class AppointmentScheduling {
       return;
     }
 
-    if (!confirm('Are you sure you want to book this appointment?')) {
-      return;
-    }
+
  
     const request: AppointmentRequest = {
       patientId: Number(formData.patientId),
@@ -206,9 +236,7 @@ export class AppointmentScheduling {
       return;
     }
 
-    if (!confirm('Are you sure you want to update this appointment?')) {
-      return;
-    }
+
  
     const request: AppointmentUpdateRequest = {
       appointmentId: Number(formData.id),
@@ -231,9 +259,7 @@ export class AppointmentScheduling {
       return;
     }
 
-    if (!confirm('Are you sure you want to cancel this appointment?')) {
-      return;
-    }
+
  
     const cancelInfo: AppointmentCancelInfo = {
       patientName: formData.patientName.trim(),
@@ -317,6 +343,116 @@ export class AppointmentScheduling {
 
   getTodayDate(): string {
     return new Date().toISOString().split('T')[0];
+  }
+
+  selectAppointmentForUpdate(appointment: Appointment): void {
+    this.selectedAppointmentForUpdate = appointment;
+    this.showUpdateForm = true;
+    this.showCancelForm = false;
+    this.clearMessages();
+    
+    // Set current slot and times from appointment
+    this.selectedUpdateSlot = appointment.slot;
+    const slot = this.timeSlots.find(s => s.value === appointment.slot);
+    if (slot) {
+      this.selectedUpdateStartTime = slot.startTime;
+      this.selectedUpdateEndTime = slot.endTime;
+    }
+    
+    // Fetch and populate form data
+    this.updateFormData = {
+      id: appointment.id,
+      newDate: appointment.date,
+      patientName: 'Loading...',
+      patientEmail: 'Loading...',
+      doctorName: 'Loading...'
+    };
+    
+    this.fetchPatientAndDoctorDetails(appointment.patientId, appointment.doctorId, 'update');
+    
+    // Scroll to update form
+    setTimeout(() => {
+      document.getElementById('update-form')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }
+
+  selectAppointmentForCancel(appointment: Appointment): void {
+    this.selectedAppointmentForCancel = appointment;
+    this.showCancelForm = true;
+    this.showUpdateForm = false;
+    this.clearMessages();
+    
+    // Set times from appointment slot
+    const slot = this.timeSlots.find(s => s.value === appointment.slot);
+    let startTime = '', endTime = '';
+    if (slot) {
+      startTime = slot.startTime;
+      endTime = slot.endTime;
+    }
+    
+    // Fetch and populate form data
+    this.cancelFormData = {
+      id: appointment.id,
+      date: appointment.date,
+      startTime: startTime,
+      endTime: endTime,
+      patientName: 'Loading...',
+      patientEmail: 'Loading...',
+      doctorName: 'Loading...'
+    };
+    
+    this.fetchPatientAndDoctorDetails(appointment.patientId, appointment.doctorId, 'cancel');
+    
+    // Scroll to cancel form
+    setTimeout(() => {
+      document.getElementById('cancel-form')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }
+
+  fetchPatientAndDoctorDetails(patientId: number, doctorId: number, formType: 'update' | 'cancel'): void {
+    // Get current user details (assuming logged in user is the patient)
+    this.appointmentService.getCurrentPatientId().subscribe({
+      next: (currentPatientId) => {
+        // For now, use placeholder data - you can enhance this with actual API calls
+        const patientName = 'Current Patient'; // Replace with actual API call
+        const patientEmail = 'patient@example.com'; // Replace with actual API call
+        const doctorName = `Doctor ${doctorId}`; // Replace with actual API call
+        
+        if (formType === 'update') {
+          this.updateFormData.patientName = patientName;
+          this.updateFormData.patientEmail = patientEmail;
+          this.updateFormData.doctorName = doctorName;
+        } else {
+          this.cancelFormData.patientName = patientName;
+          this.cancelFormData.patientEmail = patientEmail;
+          this.cancelFormData.doctorName = doctorName;
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching details:', error);
+      }
+    });
+  }
+
+  showSuccessPopup(title: string, message: string): void {
+    const popup = document.createElement('div');
+    popup.className = 'success-popup';
+    popup.innerHTML = `
+      <div class="popup-content">
+        <div class="popup-icon">✓</div>
+        <h4>${title}</h4>
+        <p>${message}</p>
+        <button class="popup-btn" onclick="document.querySelector('.success-popup').remove()">OK</button>
+      </div>
+    `;
+    document.body.appendChild(popup);
+    
+    setTimeout(() => {
+      const existingPopup = document.querySelector('.success-popup');
+      if (existingPopup) {
+        existingPopup.remove();
+      }
+    }, 4000);
   }
 }
  

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, of, map } from 'rxjs';
 import { AuthService } from '../services/auth.service';
  
 export interface Appointment {
@@ -119,6 +119,12 @@ export class AppointmentService {
         console.error('Available slots API error:', error);
         return of([]);
       })
+    );
+  }
+
+  getCurrentPatientId(): Observable<number> {
+    return this.http.get<{id: number}>(`http://localhost:8081/auth/current-user`, this.getHttpOptions()).pipe(
+      map(user => user.id)
     );
   }
 }
