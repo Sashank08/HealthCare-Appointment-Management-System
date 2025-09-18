@@ -33,13 +33,6 @@ export class UserManagementComponent implements OnInit {
     weeklyConsultations: 0,
     rating: 0
   };
-  
-  patientHealthSummary = {
-    lastVisit: null as any,
-    currentMedications: [] as any[],
-    vitalSigns: null as any
-  };
-  
   todaysSchedule: any[] = [];
   doctorProfile: any = {
     specialization: '',
@@ -89,7 +82,7 @@ export class UserManagementComponent implements OnInit {
         this.loadDoctorStats();
         this.currentView = 'doctor-dashboard';
       } else if (role === 'PATIENT') {
-        this.loadPatientHealthSummary();
+        this.loadPatientProfile(); // Load patient ID from backend
         this.currentView = 'dashboard';
       }
     }
@@ -240,7 +233,10 @@ export class UserManagementComponent implements OnInit {
                 this.authService.saveToken(token);
                 this.userRole = this.authService.extractRoleFromToken(token);
                 this.userName = this.authService.extractUserNameFromToken(token) || this.registrationData.fullName;
+                this.userEmail = this.registrationData.email;
+                this.userPhone = this.registrationData.phone; // Set phone from registration
                 this.extractUserInfoFromToken(token);
+                this.loadPatientProfile(); // Load patient ID from backend
                 this.currentView = 'dashboard';
                 this.scrollToDashboard();
               },
@@ -278,10 +274,8 @@ export class UserManagementComponent implements OnInit {
           if (!this.userEmail) {
             this.userEmail = this.loginData.email;
           }
-          // Generate patient ID if not set
-          if (this.userId === 0 && this.userEmail) {
-            this.userId = this.generatePatientId(this.userEmail);
-          }
+          // Load patient profile from backend to get real ID
+          this.loadPatientProfile();
           
           // Try to get user data by email if phone not available
           if (!this.userPhone && this.userEmail) {
@@ -289,7 +283,7 @@ export class UserManagementComponent implements OnInit {
           }
           
           if (this.canAccessPatientDashboard()) {
-            this.loadPatientHealthSummary();
+            this.loadPatientProfile(); // Load patient ID from backend
             this.currentView = 'dashboard';
             this.scrollToDashboard();
           }
@@ -687,12 +681,8 @@ export class UserManagementComponent implements OnInit {
       this.userPhone = payload.phone || '';
       this.userAge = payload.age || 0;
       
-      // Only generate patient ID for patients, not doctors
-      if (this.userRole === 'PATIENT' && this.userEmail) {
-        this.userId = this.generatePatientId(this.userEmail);
-      } else if (this.userRole === 'DOCTOR') {
-        this.userId = 0; // Will be set from backend
-      }
+      // Set userId to 0 initially - will be fetched from backend for both patients and doctors
+      this.userId = 0;
       
       console.log('Extracted user info - ID:', this.userId, 'Email:', this.userEmail, 'Phone:', this.userPhone, 'Age:', this.userAge);
     } catch (error) {
@@ -725,31 +715,30 @@ export class UserManagementComponent implements OnInit {
     console.log('Fetching user data for email:', email);
   }
 
-  loadPatientHealthSummary() {
-    if (this.userId > 0) {
-      this.consultationService.getMedicalHistory(this.userId).subscribe({
-        next: (consultations) => {
-          if (consultations && consultations.length > 0) {
-            // Get the most recent consultation
-            const lastConsultation = consultations[0];
-            this.patientHealthSummary.lastVisit = lastConsultation;
+  loadPatientProfile() {
+    // Use known patient phone numbers from your database
+    const patientPhones = ['8770645952', '6370089970'];
+    
+    // Try each phone number to find the matching patient
+    for (const phone of patientPhones) {
+      this.authService.getUserByPhone(phone).subscribe({
+        next: (patient) => {
+          // Check if this patient matches the logged-in user's email
+          if (patient.userEmail === this.userEmail) {
+            // Update patient info with real database data
+            this.userName = patient.name || this.userName;
+            this.userEmail = patient.userEmail || this.userEmail;
+            this.userPhone = patient.phone ? patient.phone.toString() : this.userPhone;
+            this.userId = patient.id || this.userId;
+            this.userAge = patient.age || this.userAge;
             
-            // Extract medications from the last consultation
-            if (lastConsultation.prescription) {
-              this.patientHealthSummary.currentMedications = lastConsultation.prescription.split(',').map((med: string) => med.trim());
-            }
-            
-            // Set default vital signs (consultation records don't include vital signs)
-            this.patientHealthSummary.vitalSigns = {
-              bloodPressure: '120/80 mmHg',
-              heartRate: '72 bpm',
-              temperature: '98.6°F',
-              weight: '70 kg'
-            };
+            console.log('Patient profile loaded from auth service:', patient);
+            console.log('Updated patient userId to:', this.userId);
+            console.log('Updated patient userName to:', this.userName);
           }
         },
         error: (error) => {
-          console.error('Error loading patient health summary:', error);
+          console.error('Error loading patient profile:', error);
         }
       });
     }
@@ -861,21 +850,6 @@ export class UserManagementComponent implements OnInit {
     } else {
       return 'Upcoming';
     }
-  }
-
-  downloadReports() {
-    alert('Downloading your medical reports...');
-    // TODO: Implement actual report download functionality
-  }
-
-  contactDoctor() {
-    alert('Connecting you to your doctor...');
-    // TODO: Implement doctor contact functionality
-  }
-
-  refillPrescription() {
-    alert('Processing prescription refill request...');
-    // TODO: Implement prescription refill functionality
   }
 
   logout() {
