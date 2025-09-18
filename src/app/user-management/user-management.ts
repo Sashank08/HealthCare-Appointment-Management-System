@@ -190,12 +190,11 @@ export class UserManagementComponent implements OnInit {
     }
   }
 
-  showUpcomingAppointments() {
-    alert('Upcoming Appointments - Feature coming soon!');
-  }
+
 
   showCreateConsultation() {
-    alert('Create Consultation - Feature coming soon!');
+    this.currentView = 'consultation-records';
+    this.scrollToConsultationRecords();
   }
 
   showCreateAvailability() {
@@ -210,6 +209,25 @@ export class UserManagementComponent implements OnInit {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }, 100);
+  }
+
+  scrollToConsultationRecords() {
+    setTimeout(() => {
+      const element = document.getElementById('consultation-records');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  }
+
+  goBackFromConsultation() {
+    if (this.userRole === 'DOCTOR' || this.userRole === 'ADMIN') {
+      this.currentView = 'doctor-dashboard';
+      this.scrollToDoctorDashboard();
+    } else {
+      this.currentView = 'dashboard';
+      this.scrollToDashboard();
+    }
   }
 
   register() {
@@ -430,15 +448,6 @@ export class UserManagementComponent implements OnInit {
     }, 100);
   }
   
-  scrollToConsultationRecords() {
-    setTimeout(() => {
-      const element = document.getElementById('consultation-records');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
-  }
-  
   scrollToAppointmentManagement() {
     setTimeout(() => {
       const element = document.getElementById('appointment-management');
@@ -458,10 +467,8 @@ export class UserManagementComponent implements OnInit {
   }
   
   loadMedicalHistoryForPatient(patientId: number) {
-    console.log('Loading medical history for patient:', patientId);
     this.consultationService.getMedicalHistory(patientId).subscribe({
       next: (consultations) => {
-        console.log('Medical history loaded:', consultations);
       },
       error: (error) => {
         console.error('Error loading medical history:', error);
@@ -628,8 +635,15 @@ export class UserManagementComponent implements OnInit {
     
     const role = this.authService.extractRoleFromToken(token);
     if (role !== 'DOCTOR') {
-      alert('Access denied: Doctor role required');
-      this.showHome();
+      if (role === 'PATIENT') {
+        alert('Access denied: This is the doctor portal. Please use the patient login form to access patient features.');
+        this.resetUserData(); // Clear all user data and token
+        this.showHome();
+      } else {
+        alert('Access denied: Doctor role required');
+        this.resetUserData(); // Clear all user data and token
+        this.showHome();
+      }
       return false;
     }
     
@@ -646,8 +660,15 @@ export class UserManagementComponent implements OnInit {
     
     const role = this.authService.extractRoleFromToken(token);
     if (role !== 'PATIENT') {
-      alert('Access denied: Patient role required');
-      this.showHome();
+      if (role === 'DOCTOR' || role === 'ADMIN') {
+        alert('Access denied: This is the patient login portal. Please use the "Doctor Portal" button to access doctor features.');
+        this.resetUserData(); // Clear all user data and token
+        this.showHome();
+      } else {
+        alert('Access denied: Patient role required');
+        this.resetUserData(); // Clear all user data and token
+        this.showHome();
+      }
       return false;
     }
     
@@ -692,7 +713,7 @@ export class UserManagementComponent implements OnInit {
         this.userId = this.generatePatientId(this.userEmail);
       }
       
-      console.log('Extracted user info - ID:', this.userId, 'Email:', this.userEmail, 'Phone:', this.userPhone, 'Age:', this.userAge, 'Name:', this.userName);
+
     } catch (error) {
       console.error('Error extracting user info from token:', error);
     }
@@ -809,46 +830,54 @@ export class UserManagementComponent implements OnInit {
   }
 
   loadDoctorProfile() {
-    // Use phone number from JWT or fallback to known doctor phone
-    const phoneToSearch = this.userPhone || '9888348920';
+    // Get email from JWT token subject
+    const token = this.authService.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userEmail = payload.sub || payload.email;
     
-    if (phoneToSearch) {
-      this.authService.getUserByPhone(phoneToSearch).subscribe({
-        next: (doctor) => {
-          if (doctor) {
+                if (userEmail && userEmail.trim() !== '') {
+          this.authService.getUserByEmail(userEmail).subscribe({
+            next: (doctor) => {
+              if (doctor) {
+                
             // Update user info with real database data
             this.userId = doctor.id;
             this.userName = doctor.name || this.userName;
+                this.userEmail = doctor.userEmail || this.userEmail;
             this.userPhone = doctor.phone?.toString() || this.userPhone;
+                this.userAge = doctor.age || this.userAge;
             
-            // Set doctor profile
+                // Set doctor profile with real data (remove dummy fields)
             this.doctorProfile = {
-              specialization: doctor.specialisation || 'Cardiology',
-              experience: '5+ years',
-              qualification: 'MBBS, MD'
+                  specialization: doctor.specialisation || 'General Medicine'
             };
-            
-            console.log('Doctor profile loaded by phone:', doctor);
           }
         },
         error: (error) => {
-          console.error('Error loading doctor profile by phone:', error);
-          // Fallback to JWT data
-          this.doctorProfile = {
-            specialization: 'Cardiology',
-            experience: '5+ years',
-            qualification: 'MBBS, MD'
-          };
+              console.log('Could not load doctor profile from backend, using default values');
+              this.setDefaultDoctorProfile();
         }
       });
     } else {
-      // Fallback to default values
-      this.doctorProfile = {
-        specialization: 'Cardiology',
-        experience: '5+ years',
-        qualification: 'MBBS, MD'
-      };
+          console.log('No email available in JWT token, using default doctor profile');
+          this.setDefaultDoctorProfile();
+        }
+      } catch (error) {
+        console.error('Error parsing JWT token:', error);
+        this.setDefaultDoctorProfile();
+      }
+    } else {
+      console.log('No token available, using default doctor profile');
+      this.setDefaultDoctorProfile();
     }
+  }
+
+  private setDefaultDoctorProfile() {
+      this.doctorProfile = {
+      specialization: 'General Medicine'
+      };
   }
 
   getAppointmentStatus(slot: string): string {
@@ -865,24 +894,10 @@ export class UserManagementComponent implements OnInit {
     }
   }
 
-  downloadReports() {
-    alert('Downloading your medical reports...');
-    // TODO: Implement actual report download functionality
-  }
 
-  contactDoctor() {
-    alert('Connecting you to your doctor...');
-    // TODO: Implement doctor contact functionality
-  }
 
-  refillPrescription() {
-    alert('Processing prescription refill request...');
-    // TODO: Implement prescription refill functionality
-  }
-
-  logout() {
+  resetUserData() {
     this.authService.removeToken();
-    this.currentView = 'login';
     this.userRole = null;
     this.userName = 'John Doe';
     this.userEmail = '';
@@ -895,6 +910,14 @@ export class UserManagementComponent implements OnInit {
       weeklyConsultations: 0,
       rating: 0
     };
+    this.doctorProfile = {
+      specialization: ''
+    };
+  }
+
+  logout() {
+    this.resetUserData();
+    this.currentView = 'login';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

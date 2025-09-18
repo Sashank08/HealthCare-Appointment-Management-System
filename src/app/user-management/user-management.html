@@ -45,18 +45,6 @@
               <small class="text-muted">Phone:</small><br>
               <strong>{{userPhone}}</strong>
             </li>
-            <li class="px-3 py-2" *ngIf="userAge > 0">
-              <small class="text-muted">Age:</small><br>
-              <strong>{{userAge}} years</strong>
-            </li>
-            <li class="px-3 py-2" *ngIf="userRole === 'PATIENT'">
-              <small class="text-muted">Patient ID:</small><br>
-              <strong>#{{userId}}</strong>
-            </li>
-            <li class="px-3 py-2" *ngIf="userRole === 'DOCTOR' || userRole === 'ADMIN'">
-              <small class="text-muted">Doctor ID:</small><br>
-              <strong>#{{userId}}</strong>
-            </li>
             <li><hr class="dropdown-divider"></li>
             <li>
               <button class="dropdown-item text-danger" (click)="logout()">
@@ -338,30 +326,19 @@
     </div>
     
     <!-- Dashboard Cards -->
-    <div class="row g-4">
-      <div class="col-lg-4">
+    <div class="row g-4 justify-content-center">
+      <div class="col-lg-4 col-md-6">
         <div class="card h-100 shadow border-0">
           <div class="card-body text-center p-4">
-            <i class="fas fa-home fa-4x text-primary mb-3"></i>
-            <h4>Home</h4>
-            <p class="text-muted mb-4">Return to main dashboard</p>
-            <button class="btn btn-primary" (click)="showHome()">Go to Home</button>
+            <i class="fas fa-calendar-plus fa-4x text-success mb-3"></i>
+            <h4>Schedule Appointment</h4>
+            <p class="text-muted mb-4">Book new appointments with available doctors</p>
+            <button class="btn btn-success" (click)="showAppointmentHistory()">Book Appointment</button>
           </div>
         </div>
       </div>
       
-      <div class="col-lg-4">
-        <div class="card h-100 shadow border-0">
-          <div class="card-body text-center p-4">
-            <i class="fas fa-calendar-alt fa-4x text-success mb-3"></i>
-            <h4>Appointment History</h4>
-            <p class="text-muted mb-4">View your past and upcoming appointments</p>
-            <button class="btn btn-success" (click)="showAppointmentHistory()">View History</button>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-lg-4">
+      <div class="col-lg-4 col-md-6">
         <div class="card h-100 shadow border-0">
           <div class="card-body text-center p-4">
             <i class="fas fa-file-medical fa-4x text-info mb-3"></i>
@@ -373,87 +350,7 @@
       </div>
     </div>
     
-    <!-- Health Summary -->
-    <div class="row mt-4 mb-4">
-      <div class="col-lg-8">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-header bg-transparent border-0 pb-0">
-            <h5 class="mb-0">Health Summary</h5>
-          </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="border rounded p-3">
-                  <h6 class="mb-2">Vital Signs (Last Visit)</h6>
-                  <div class="row">
-                    <div class="col-6">
-                      <small class="text-muted">Blood Pressure:</small>
-                      <div class="fw-semibold text-success">{{patientHealthSummary.vitalSigns?.bloodPressure || 'Not Available'}}</div>
-                    </div>
-                    <div class="col-6">
-                      <small class="text-muted">Heart Rate:</small>
-                      <div class="fw-semibold text-success">{{patientHealthSummary.vitalSigns?.heartRate || 'Not Available'}}</div>
-                    </div>
-                  </div>
-                  <div class="row mt-2">
-                    <div class="col-6">
-                      <small class="text-muted">Temperature:</small>
-                      <div class="fw-semibold text-success">{{patientHealthSummary.vitalSigns?.temperature || 'Not Available'}}</div>
-                    </div>
-                    <div class="col-6">
-                      <small class="text-muted">Weight:</small>
-                      <div class="fw-semibold">{{patientHealthSummary.vitalSigns?.weight || 'Not Available'}}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="border rounded p-3">
-                  <h6 class="mb-2">Current Medications</h6>
-                  <div *ngIf="patientHealthSummary.currentMedications.length > 0; else noMedications">
-                    <div class="mb-2" *ngFor="let medication of patientHealthSummary.currentMedications">
-                      <div class="d-flex justify-content-between">
-                        <span class="fw-semibold">{{medication}}</span>
-                        <small class="text-muted">As prescribed</small>
-                      </div>
-                      <small class="text-muted">From last consultation</small>
-                    </div>
-                  </div>
-                  <ng-template #noMedications>
-                    <div class="text-muted">
-                      <small>No current medications on record</small>
-                    </div>
-                  </ng-template>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-header bg-transparent border-0 pb-0">
-            <h5 class="mb-0">Quick Actions</h5>
-          </div>
-          <div class="card-body">
-            <div class="d-grid gap-2">
-              <button class="btn btn-outline-primary btn-sm" (click)="downloadReports()">
-                <i class="fas fa-download me-2"></i>Download Reports
-              </button>
-              <button class="btn btn-outline-success btn-sm" (click)="showAppointmentHistory()">
-                <i class="fas fa-calendar-plus me-2"></i>Book Appointment
-              </button>
-              <button class="btn btn-outline-info btn-sm" (click)="contactDoctor()">
-                <i class="fas fa-phone me-2"></i>Contact Doctor
-              </button>
-              <button class="btn btn-outline-warning btn-sm" (click)="refillPrescription()">
-                <i class="fas fa-pills me-2"></i>Refill Prescription
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Logout Button -->
     <div class="row mt-5">
@@ -1134,102 +1031,9 @@
       </div>
     </div>
     
-    <!-- Doctor Stats -->
-    <div class="row g-4 mb-4">
-      <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body text-center p-3">
-            <div class="d-flex align-items-center justify-content-center mb-2">
-              <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                <i class="fas fa-users fa-2x text-primary"></i>
-              </div>
-            </div>
-            <h4 class="mb-1">{{doctorStats.totalPatients || 0}}</h4>
-            <small class="text-muted">Total Patients</small>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body text-center p-3">
-            <div class="d-flex align-items-center justify-content-center mb-2">
-              <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                <i class="fas fa-calendar-check fa-2x text-success"></i>
-              </div>
-            </div>
-            <h4 class="mb-1">{{doctorStats.todayAppointments || 0}}</h4>
-            <small class="text-muted">Today's Appointments</small>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body text-center p-3">
-            <div class="d-flex align-items-center justify-content-center mb-2">
-              <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                <i class="fas fa-file-medical fa-2x text-info"></i>
-              </div>
-            </div>
-            <h4 class="mb-1">{{doctorStats.weeklyConsultations || 0}}</h4>
-            <small class="text-muted">Consultations This Week</small>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body text-center p-3">
-            <div class="d-flex align-items-center justify-content-center mb-2">
-              <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                <i class="fas fa-star fa-2x text-warning"></i>
-              </div>
-            </div>
-            <h4 class="mb-1">{{doctorStats.rating || 'N/A'}}</h4>
-            <small class="text-muted">Patient Rating</small>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Today's Schedule -->
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-transparent border-0 pb-0">
-            <h5 class="mb-0">Today's Schedule - December 16, 2024</h5>
-          </div>
-          <div class="card-body">
-            <div class="row g-3" *ngIf="todaysSchedule.length > 0; else noAppointments">
-              <div class="col-md-4" *ngFor="let appointment of todaysSchedule.slice(0, 3)">
-                <div class="border rounded p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <h6 class="mb-1">{{appointment.patientName}}</h6>
-                      <small class="text-muted">Appointment #{{appointment.id}}</small>
-                    </div>
-                    <span class="badge" 
-                          [class.bg-success]="appointment.status === 'Completed'"
-                          [class.bg-primary]="appointment.status === 'In Progress'"
-                          [class.bg-warning]="appointment.status === 'Upcoming'">
-                      {{appointment.status}}
-                    </span>
-                  </div>
-                  <div class="d-flex align-items-center text-muted">
-                    <i class="fas fa-clock me-2"></i>
-                    <small>{{appointment.slot}}</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <ng-template #noAppointments>
-              <div class="text-center text-muted py-4">
-                <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                <p class="mb-0">No appointments scheduled for today</p>
-              </div>
-            </ng-template>
-          </div>
-        </div>
-      </div>
-    </div>
+
+
 
     <!-- Doctor Profile Summary -->
     <div class="row mb-4">
@@ -1240,10 +1044,6 @@
               <div class="col-md-8">
                 <h5 class="mb-3">Doctor Profile</h5>
                 <div class="row">
-                  <div class="col-sm-6 mb-2">
-                    <small class="text-muted">Doctor ID:</small>
-                    <div class="fw-semibold">#{{userId || 'DOC-001'}}</div>
-                  </div>
                   <div class="col-sm-6 mb-2">
                     <small class="text-muted">Email:</small>
                     <div class="fw-semibold">{{userEmail || 'Not Available'}}</div>
@@ -1257,12 +1057,8 @@
                     <div class="fw-semibold">{{doctorProfile.specialization || 'General Medicine'}}</div>
                   </div>
                   <div class="col-sm-6 mb-2">
-                    <small class="text-muted">Experience:</small>
-                    <div class="fw-semibold">{{doctorProfile.experience || '5+ years'}}</div>
-                  </div>
-                  <div class="col-sm-6 mb-2">
-                    <small class="text-muted">Qualification:</small>
-                    <div class="fw-semibold">{{doctorProfile.qualification || 'MBBS, MD'}}</div>
+                    <small class="text-muted">Age:</small>
+                    <div class="fw-semibold">{{userAge || 'Not Available'}}</div>
                   </div>
                   <div class="col-sm-6 mb-2">
                     <small class="text-muted">Role:</small>
@@ -1284,19 +1080,8 @@
       </div>
     </div>
 
-    <div class="row g-4">
-      <div class="col-lg-4">
-        <div class="card h-100 shadow border-0">
-          <div class="card-body text-center p-4">
-            <i class="fas fa-calendar-alt fa-4x text-primary mb-3"></i>
-            <h4>Upcoming Appointments</h4>
-            <p class="text-muted mb-4">View and manage your scheduled appointments</p>
-            <button class="btn btn-primary" (click)="showUpcomingAppointments()">View Appointments</button>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-lg-4">
+    <div class="row g-4 justify-content-center">
+      <div class="col-lg-4 col-md-6">
         <div class="card h-100 shadow border-0">
           <div class="card-body text-center p-4">
             <i class="fas fa-notes-medical fa-4x text-success mb-3"></i>
@@ -1307,7 +1092,7 @@
         </div>
       </div>
       
-      <div class="col-lg-4">
+      <div class="col-lg-4 col-md-6">
         <div class="card h-100 shadow border-0">
           <div class="card-body text-center p-4">
             <i class="fas fa-clock fa-4x text-info mb-3"></i>
@@ -1319,13 +1104,7 @@
       </div>
     </div>
     
-    <div class="row mt-5">
-      <div class="col-12 text-center">
-        <button class="btn btn-outline-danger" (click)="showHome()">
-          <i class="fas fa-sign-out-alt me-2"></i>Back to Home
-        </button>
-      </div>
-    </div>
+
   </div>
 </section>
 
@@ -1346,7 +1125,7 @@
     </div>
     
     <div class="text-center mt-4">
-      <button class="btn btn-primary px-4" (click)="currentView = 'dashboard'; scrollToDashboard()">
+      <button class="btn btn-primary px-4" (click)="goBackFromConsultation()">
         <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
       </button>
     </div>

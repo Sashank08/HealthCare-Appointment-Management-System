@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { ConsultationRecordsService, Consultation } from '../services/consultation-records';
+import { AvailabilityService, Appointment } from '../doctor-availability/doctor-availabilty';
 
 @Component({
   selector: 'app-consultation-records',
@@ -13,16 +14,29 @@ import { ConsultationRecordsService, Consultation } from '../services/consultati
 export class ConsultationRecordsComponent implements OnInit, OnDestroy {
   private consultationService = inject(ConsultationRecordsService);
   private formBuilder = inject(FormBuilder);
+  private availabilityService = inject(AvailabilityService);
   private destroy$ = new Subject<void>();
 
   consultationForm: FormGroup;
+  
   consultations: Consultation[] = [];
   selectedPatientId: number | null = null;
   
+  // Doctor appointments for autofill
+  doctorAppointments: Appointment[] = [];
+  selectedAppointment: Appointment | null = null;
+  currentDoctorId: number = 0;
+  
+  // User role detection
+  userRole: string | null = null;
+  isDoctor: boolean = false;
+  isPatient: boolean = false;
+  currentPatientId: number = 0;
+  
   errorMessage = '';
   successMessage = '';
-  showAddForm = false;
   
+  showAddForm = false;
   isLoading = false;
   isSubmitting = false;
 
@@ -45,6 +59,21 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
     this.consultationForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.clearMessages());
+
+    // Load user info and initialize based on role
+    this.loadCurrentDoctorInfo();
+    this.initializeForUserRole();
+  }
+
+  initializeForUserRole(): void {
+    // For patients, automatically load their medical history
+    // For doctors, they need to manually search for patient records
+    if (this.isPatient && this.currentPatientId > 0) {
+      // Auto-load patient's own medical history
+      setTimeout(() => {
+        this.viewMedicalHistory(this.currentPatientId, false);
+      }, 500);
+    }
   }
 
   ngOnDestroy(): void {
@@ -146,6 +175,58 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
   clearMessages(): void {
     this.errorMessage = '';
     this.successMessage = '';
+  }
+
+  loadCurrentDoctorInfo(): void {
+    // Get user info from JWT token
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        this.userRole = payload.role || payload.user_type;
+        this.isDoctor = this.userRole === 'DOCTOR';
+        this.isPatient = this.userRole === 'PATIENT';
+        
+        // Handle role-specific initialization
+        if (this.isDoctor) {
+          this.currentDoctorId = payload.id || payload.userId || 0;
+          
+          if (this.currentDoctorId > 0) {
+            this.loadDoctorAppointments();
+          }
+        } else if (this.isPatient) {
+          this.currentPatientId = payload.id || payload.userId || 0;
+        }
+      } catch (error) {
+        console.error('Error parsing JWT token:', error);
+      }
+    }
+  }
+
+  loadDoctorAppointments(): void {
+    this.availabilityService.getAppointmentsByDoctor(this.currentDoctorId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (appointments) => {
+          this.doctorAppointments = appointments;
+        },
+        error: (error) => {
+          console.error('Error loading doctor appointments:', error);
+        }
+      });
+  }
+
+  onAppointmentSelect(appointmentId: string): void {
+    const selectedId = parseInt(appointmentId, 10);
+    this.selectedAppointment = this.doctorAppointments.find(apt => apt.id === selectedId) || null;
+    
+    if (this.selectedAppointment) {
+      // Autofill appointment ID and patient ID
+      this.consultationForm.patchValue({
+        appointmentId: this.selectedAppointment.id,
+        patientId: this.selectedAppointment.patientId
+      });
+    }
   }
 
   trackByConsultationId(index: number, consultation: Consultation): number {

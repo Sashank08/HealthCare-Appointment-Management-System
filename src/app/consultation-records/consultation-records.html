@@ -19,7 +19,7 @@
         </div>
       }
 
-      <div class="mb-4">
+      <div class="mb-4" *ngIf="isDoctor">
         <button
           type="button"
           class="btn btn-success"
@@ -30,7 +30,7 @@
         </button>
       </div>
 
-      @if (showAddForm) {
+      @if (showAddForm && isDoctor) {
         <div class="card mb-4">
           <div class="card-header">
             <h5 class="card-title mb-0">Add New Consultation</h5>
@@ -38,6 +38,23 @@
           <div class="card-body">
             <form [formGroup]="consultationForm" (ngSubmit)="onSubmit()">
               <div class="row g-3">
+                <div class="col-12" *ngIf="doctorAppointments.length > 0">
+                  <label for="appointmentSelect" class="form-label">Select Appointment <span class="text-danger">*</span></label>
+                  <select
+                    class="form-control"
+                    id="appointmentSelect"
+                    (change)="onAppointmentSelect($any($event.target).value)">
+                    <option value="">Choose an appointment...</option>
+                    <option *ngFor="let appointment of doctorAppointments" [value]="appointment.id">
+                      Appointment #{{appointment.id}} - Patient ID: {{appointment.patientId}} - {{appointment.date}} {{appointment.slot}}
+                      <span *ngIf="appointment.patientName"> ({{appointment.patientName}})</span>
+                    </option>
+                  </select>
+                  <div class="form-text text-info">
+                    <i class="fas fa-info-circle me-1"></i>Select an appointment to autofill the form
+                  </div>
+                </div>
+                
                 <div class="col-md-6">
                   <label for="patientId" class="form-label">Patient ID <span class="text-danger">*</span></label>
                   <input
@@ -46,10 +63,16 @@
                     id="patientId"
                     formControlName="patientId"
                     [class.is-invalid]="hasError('patientId')"
+                    [readonly]="selectedAppointment !== null"
                     min="1">
                   @if (hasError('patientId')) {
                     <div class="invalid-feedback">
                       {{ getErrorMessage('patientId') }}
+                    </div>
+                  }
+                  @if (selectedAppointment) {
+                    <div class="form-text text-success">
+                      <i class="fas fa-check-circle me-1"></i>Auto-filled from selected appointment
                     </div>
                   }
                 </div>
@@ -61,10 +84,16 @@
                     id="appointmentId"
                     formControlName="appointmentId"
                     [class.is-invalid]="hasError('appointmentId')"
+                    [readonly]="selectedAppointment !== null"
                     min="1">
                   @if (hasError('appointmentId')) {
                     <div class="invalid-feedback">
                       {{ getErrorMessage('appointmentId') }}
+                    </div>
+                  }
+                  @if (selectedAppointment) {
+                    <div class="form-text text-success">
+                      <i class="fas fa-check-circle me-1"></i>Auto-filled from selected appointment
                     </div>
                   }
                 </div>
@@ -137,7 +166,9 @@
                   type="number"
                   class="form-control"
                   id="searchPatientId"
-                  placeholder="Enter Patient ID"
+                  [value]="isPatient ? currentPatientId : ''"
+                  [placeholder]="isPatient ? 'Your Patient ID (Auto-filled)' : 'Enter Patient ID'"
+                  [readonly]="isPatient"
                   #patientIdInput
                   min="1"
                   (keyup.enter)="onSearchClick(patientIdInput.value)">
@@ -154,10 +185,17 @@
                   }
                 </button>
               </div>
+              @if (isPatient && currentPatientId > 0) {
+                <div class="form-text text-success mt-2">
+                  <i class="fas fa-info-circle me-1"></i>Viewing your own medical history
+                </div>
+              }
             </div>
           </div>
         </div>
       </div>
+
+
 
       @if (selectedPatientId) {
         <div class="card">

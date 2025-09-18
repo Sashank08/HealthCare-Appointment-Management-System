@@ -24,9 +24,6 @@
         <span *ngIf="!userRole">Search Availability</span>
       </h2>
       <div class="header-actions" *ngIf="userRole === 'DOCTOR'">
-        <button class="btn-consultation" (click)="goToConsultation()" title="Start Consultation">
-          Start Consultation
-        </button>
         <div class="view-toggle">
           <button class="toggle-btn" [class.active]="!showAppointments" (click)="showAppointments = false">Availability</button>
           <button class="toggle-btn" [class.active]="showAppointments" (click)="toggleAppointmentsView()">Appointments</button>
@@ -84,7 +81,6 @@
             <th>Date</th>
             <th>Time</th>
             <th>Status</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -94,22 +90,6 @@
             <td>{{ appointment.date }}</td>
             <td>{{ appointment.slot }}</td>
             <td><span class="status-badge" [class]="'status-' + appointment.status?.toLowerCase().replace(' ', '-')">{{ appointment.status }}</span></td>
-            <td>
-              <div class="action-buttons">
-                <button *ngIf="appointment.status === 'Upcoming'" 
-                        (click)="openRescheduleModal(appointment)" 
-                        class="btn-reschedule" 
-                        title="Reschedule appointment">
-                  Reschedule
-                </button>
-                <button *ngIf="appointment.status !== 'Completed'" 
-                        (click)="cancelAppointment(appointment)" 
-                        class="btn-cancel" 
-                        title="Cancel appointment">
-                  Cancel
-                </button>
-              </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -269,48 +249,3 @@
   </div>
 </div>
 
-<!-- Reschedule Appointment Modal -->
-<div *ngIf="showRescheduleModal" class="modal-overlay" (click)="closeRescheduleModal()">
-  <div class="modal-container" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Reschedule Appointment</h3>
-      <button class="close-btn" (click)="closeRescheduleModal()">×</button>
-    </div>
-    <div class="appointment-details" *ngIf="selectedAppointment">
-      <div class="detail-row">
-        <strong>Patient:</strong> {{ selectedAppointment.patientName }}
-      </div>
-      <div class="detail-row">
-        <strong>Current Date:</strong> {{ selectedAppointment.date }}
-      </div>
-      <div class="detail-row">
-        <strong>Current Time:</strong> {{ selectedAppointment.slot }}
-      </div>
-    </div>
-    <form (ngSubmit)="onRescheduleSubmit()" #rescheduleForm="ngForm">
-      <div class="form-group">
-        <label for="rescheduleDate" class="form-label required">New Date</label>
-        <input type="date" id="rescheduleDate" name="rescheduleDate" 
-               [(ngModel)]="rescheduleDate" required class="form-input">
-        <div class="field-hint">Select a future date for the appointment</div>
-      </div>
-      <div class="form-group">
-        <label for="rescheduleSlot" class="form-label required">New Time Slot</label>
-        <select id="rescheduleSlot" name="rescheduleSlot" 
-                [(ngModel)]="rescheduleSlot" required class="form-input">
-          <option value="">Select time slot</option>
-          <option *ngFor="let slot of availableRescheduleSlots" [value]="slot">{{ slot }}</option>
-        </select>
-        <div class="field-hint">Choose an available time slot</div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel" (click)="closeRescheduleModal()">Cancel</button>
-        <button type="submit" class="btn-primary" 
-                [disabled]="isSubmitting || !rescheduleDate || !rescheduleSlot">
-          <span *ngIf="!isSubmitting">Reschedule Appointment</span>
-          <span *ngIf="isSubmitting">Rescheduling...</span>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>

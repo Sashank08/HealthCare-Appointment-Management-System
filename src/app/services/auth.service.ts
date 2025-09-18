@@ -16,8 +16,6 @@ export class AuthService {
     });
     
     const loginData = { userEmail: email, password: password };
-    console.log('Login request to:', `${this.baseUrl}/login`);
-    console.log('Login data:', loginData);
     
     return this.http.post(`${this.baseUrl}/login`, loginData, { 
       headers, 
@@ -159,6 +157,20 @@ export class AuthService {
     return this.http.get<any>(`${this.baseUrl}/by-phone/${phone}`, { headers }).pipe(
       catchError(error => {
         console.error('Get user by phone error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  getUserByEmail(email: string): Observable<any> {
+    const token = this.getToken();
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+    
+    return this.http.get<any>(`${this.baseUrl}/by-email/${email}`, { headers }).pipe(
+      catchError(error => {
+        console.error('Get user by email error:', error);
         return throwError(() => error);
       })
     );
