@@ -624,6 +624,40 @@
 .btn-book:hover {
   background: #218838;
 }
+
+.btn-reschedule {
+  background: #17a2b8;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-reschedule:hover {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  background: #dc3545;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+}
  
 .btn-update:hover {
   transform: translateY(-2px);
@@ -1042,6 +1076,24 @@
 .modal-container form {
   padding: 2rem;
 }
+
+.appointment-details {
+  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #007bff;
+}
+
+.detail-row {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.detail-row strong {
+  color: #495057;
+  margin-right: 0.5rem;
+}
  
 .modal-actions {
   display: flex;
@@ -1430,12 +1482,37 @@
   cursor: not-allowed;
 }
 
-/* View Toggle */
+/* Header Actions */
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-consultation {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-consultation:hover {
+  background: linear-gradient(135deg, #218838, #1ea085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
 }
 
 .view-toggle {

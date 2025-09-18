@@ -139,9 +139,21 @@ export class AppointmentScheduling {
   onSlotChange(selectedSlot: string): void {
     if (selectedSlot && selectedSlot.includes('-')) {
       const [startTime, endTime] = selectedSlot.split('-');
-      this.selectedStartTime = startTime.trim();
-      this.selectedEndTime = endTime.trim();
+      this.selectedStartTime = this.convertTo24Hour(startTime.trim());
+      this.selectedEndTime = this.convertTo24Hour(endTime.trim());
     }
+  }
+
+  convertTo24Hour(time12h: string): string {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') {
+      hours = '00';
+    }
+    if (modifier === 'PM') {
+      hours = (parseInt(hours, 10) + 12).toString();
+    }
+    return `${hours.padStart(2, '0')}:${minutes}`;
   }
  
   onUpdateSlotChange(selectedSlot: string, form: any): void {
@@ -264,15 +276,21 @@ export class AppointmentScheduling {
 
   onDateChange(): void {
     this.availableSlots = [];
-    if (this.selectedDoctor && this.selectedDate) {
+    // Add validation to prevent invalid dates
+    if (this.selectedDoctor && this.selectedDate && this.selectedDate.length === 10) {
       this.loadAvailableSlots();
     }
   }
 
   loadAvailableSlots(): void {
     if (this.selectedDoctor && this.selectedDate) {
-      // Ensure date is in YYYY-MM-DD format
+      // Validate and format date
       const formattedDate = this.formatDate(this.selectedDate);
+      if (!formattedDate || formattedDate.length !== 10) {
+        console.error('Invalid date format:', this.selectedDate);
+        return;
+      }
+      
       this.appointmentService.getAvailableSlots(this.selectedDoctor.id, formattedDate).subscribe({
         next: (slots) => {
           this.availableSlots = slots;
@@ -280,6 +298,7 @@ export class AppointmentScheduling {
         error: (error) => {
           console.error('Error loading available slots:', error);
           this.availableSlots = [];
+          this.errorMessage = 'Doctor is not available on selected date';
         }
       });
     }
@@ -287,7 +306,12 @@ export class AppointmentScheduling {
 
   formatDate(date: string): string {
     if (!date) return '';
+    // Handle already formatted dates
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
     const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
     return d.toISOString().split('T')[0];
   }
 
