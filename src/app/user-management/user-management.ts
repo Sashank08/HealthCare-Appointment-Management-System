@@ -265,8 +265,14 @@ export class UserManagementComponent implements OnInit {
     if (this.validateLogin()) {
       this.authService.login(this.loginData.email, this.loginData.password).subscribe({
         next: (token) => {
+          const role = this.authService.extractRoleFromToken(token);
+          if (role !== 'PATIENT') {
+            this.validationErrors.login.email = 'Login failed. This portal is for patients only.';
+            return;
+          }
+
           this.authService.saveToken(token);
-          this.userRole = this.authService.extractRoleFromToken(token);
+          this.userRole = role;
           this.userName = this.authService.extractUserNameFromToken(token) || 'Patient';
           this.userEmail = this.loginData.email;
           this.extractUserInfoFromToken(token);
@@ -307,7 +313,7 @@ export class UserManagementComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  showAppointmentHistory() {
+  showScheduleAppointment() {
     this.currentView = 'appointment-management';
     this.scrollToAppointmentManagement();
   }
