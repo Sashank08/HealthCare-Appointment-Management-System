@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { ConfigService } from '../services/config.service';
  
 export interface Availability {
   doctorID: number;
@@ -28,48 +29,34 @@ export interface Appointment {
   providedIn: 'root'
 })
 export class AvailabilityService {
-  private baseUrl = 'http://localhost:8081/api/v1/availability';
- 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: ConfigService) {}
  
   getAvailabilityByDoctor(doctorID: number, startDate: string, endDate: string): Observable<Availability[]> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.get<Availability[]>(`${this.baseUrl}/doctor/${doctorID}?startDate=${startDate}&endDate=${endDate}`, { headers });
+    return this.http.get<Availability[]>(`${this.config.availabilityApiUrl}/doctor/${doctorID}?startDate=${startDate}&endDate=${endDate}`);
   }
  
   addAvailability(availability: Availability): Observable<Availability> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.post<Availability>(this.baseUrl, availability, { headers });
+    return this.http.post<Availability>(this.config.availabilityApiUrl, availability);
   }
  
   updateAvailability(doctorID: number, date: string, availability: Availability): Observable<Availability> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.put<Availability>(`${this.baseUrl}/${doctorID}/${date}`, availability, { headers });
+    return this.http.put<Availability>(`${this.config.availabilityApiUrl}/${doctorID}/${date}`, availability);
   }
  
-  deleteAvailability(doctorID: number, date: string): Observable<void> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.delete<void>(`${this.baseUrl}/${doctorID}/${date}`, { headers });
+  deleteAvailability(doctorID: number, date: string): Observable<any> {
+    return this.http.delete(`${this.config.availabilityApiUrl}/${doctorID}/${date}`);
   }
 
   getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
-    const token = localStorage.getItem('authToken');
-    const headers = { 'Authorization': `Bearer ${token}` };
-    return this.http.get<Appointment[]>(`http://localhost:8081/appointments/doctor/${doctorId}`, { headers });
+    return this.http.get<Appointment[]>(`${this.config.appointmentsApiUrl}/doctor/${doctorId}`);
   }
-
-
 }
  
 @Component({
   selector: 'app-doctor-availabilty',
   imports: [CommonModule, FormsModule],
   templateUrl: './doctor-availabilty.html',
-  styleUrl: './doctor-availabilty.css'
+  styleUrls: ['./doctor-availabilty.css', '../shared/shared-styles.css']
 })
 export class DoctorAvailabilty {
   userRole: string | null = null;
@@ -106,6 +93,7 @@ export class DoctorAvailabilty {
 
  
   constructor(private availabilityService: AvailabilityService, private http: HttpClient, private router: Router, private authService: AuthService) {
+    console.log('Doctor availability component initialized');
     this.doctorID = 1;
     this.searchDoctorID = 1;
     this.currentUserId = 1;

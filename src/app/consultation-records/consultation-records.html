@@ -1,9 +1,11 @@
-<div class="container-fluid py-4">
-  <div class="card">
-    <div class="card-header bg-primary text-white">
-      <h4 class="card-title mb-0">Consultation Records Management</h4>
+<div class="bg-gradient-light min-vh-100 py-5">
+  <div class="container">
+    <div class="bg-gradient-primary text-white p-4 rounded-top text-center mb-0">
+      <h1 class="display-5 fw-bold mb-2"><i class="fas fa-notes-medical me-3"></i>Consultation Records Management</h1>
+      <p class="lead mb-0 opacity-75">Create consultation records and view medical history</p>
     </div>
-    <div class="card-body p-4">
+    
+    <div class="bg-white rounded-bottom shadow p-4">
 
       @if (successMessage) {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -22,48 +24,60 @@
       <div class="mb-4" *ngIf="isDoctor">
         <button
           type="button"
-          class="btn btn-success"
+          class="btn btn-success btn-hover fw-semibold px-4 py-2"
           (click)="toggleAddForm()"
           [disabled]="isSubmitting">
-          <i class="bi bi-plus-circle me-2"></i>
+          <i class="fas fa-plus-circle me-2"></i>
           {{ showAddForm ? 'Cancel' : 'Add New Consultation' }}
         </button>
       </div>
 
       @if (showAddForm && isDoctor) {
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="card-title mb-0">Add New Consultation</h5>
+        <div class="card border-0 shadow rounded-3 mb-4 card-hover">
+          <div class="card-header bg-success text-white border-0 p-3">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-notes-medical me-2"></i>Add New Consultation</h5>
           </div>
-          <div class="card-body">
+          <div class="card-body p-4">
             <form [formGroup]="consultationForm" (ngSubmit)="onSubmit()">
               <div class="row g-3">
-                <div class="col-12" *ngIf="doctorAppointments.length > 0">
-                  <label for="appointmentSelect" class="form-label">Select Appointment <span class="text-danger">*</span></label>
+                <div class="col-12" *ngIf="isDoctor && doctorAppointments.length > 0">
+                  <label for="appointmentSelect" class="form-label fw-bold">
+                    <i class="fas fa-calendar-check me-2 text-primary"></i>Select Appointment <span class="text-danger">*</span>
+                  </label>
                   <select
-                    class="form-control"
+                    class="form-select form-control-enhanced rounded-3"
                     id="appointmentSelect"
                     (change)="onAppointmentSelect($any($event.target).value)">
-                    <option value="">Choose an appointment...</option>
+                    <option value="">Choose an appointment to autofill the form...</option>
                     <option *ngFor="let appointment of doctorAppointments" [value]="appointment.id">
-                      Appointment #{{appointment.id}} - Patient ID: {{appointment.patientId}} - {{appointment.date}} {{appointment.slot}}
+                      🏥 Appointment #{{appointment.id}} - Patient ID: {{appointment.patientId}} - {{appointment.date}} {{appointment.slot}}
                       <span *ngIf="appointment.patientName"> ({{appointment.patientName}})</span>
                     </option>
                   </select>
                   <div class="form-text text-info">
-                    <i class="fas fa-info-circle me-1"></i>Select an appointment to autofill the form
+                    <i class="fas fa-lightbulb me-1"></i>Select an appointment to automatically fill Appointment ID and Patient ID
+                  </div>
+                </div>
+                
+                <div class="col-12" *ngIf="isDoctor && doctorAppointments.length === 0">
+                  <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>No appointments found.</strong> You need to have scheduled appointments to create consultations.
                   </div>
                 </div>
                 
                 <div class="col-md-6">
-                  <label for="patientId" class="form-label">Patient ID <span class="text-danger">*</span></label>
+                  <label for="patientId" class="form-label fw-bold">
+                    <i class="fas fa-user me-2 text-info"></i>Patient ID <span class="text-danger">*</span>
+                  </label>
                   <input
                     type="number"
-                    class="form-control"
+                    class="form-control form-control-enhanced rounded-3"
                     id="patientId"
                     formControlName="patientId"
                     [class.is-invalid]="hasError('patientId')"
                     [readonly]="selectedAppointment !== null"
+                    placeholder="Enter Patient ID"
                     min="1">
                   @if (hasError('patientId')) {
                     <div class="invalid-feedback">
@@ -77,14 +91,17 @@
                   }
                 </div>
                 <div class="col-md-6">
-                  <label for="appointmentId" class="form-label">Appointment ID <span class="text-danger">*</span></label>
+                  <label for="appointmentId" class="form-label fw-bold">
+                    <i class="fas fa-calendar-alt me-2 text-warning"></i>Appointment ID <span class="text-danger">*</span>
+                  </label>
                   <input
                     type="number"
-                    class="form-control"
+                    class="form-control form-control-enhanced rounded-3"
                     id="appointmentId"
                     formControlName="appointmentId"
                     [class.is-invalid]="hasError('appointmentId')"
                     [readonly]="selectedAppointment !== null"
+                    placeholder="Enter Appointment ID"
                     min="1">
                   @if (hasError('appointmentId')) {
                     <div class="invalid-feedback">

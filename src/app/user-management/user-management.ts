@@ -198,15 +198,29 @@ export class UserManagementComponent implements OnInit {
   }
 
   showCreateAvailability() {
+    console.log('Set Availability button clicked');
+    console.log('Current view before:', this.currentView);
+    console.log('User role:', this.userRole);
+    
+    // Force the view change
     this.currentView = 'doctor-availability';
-    this.scrollToDoctorAvailability();
+    console.log('Current view after:', this.currentView);
+    
+    // Add a longer timeout to ensure the view has time to render
+    setTimeout(() => {
+      this.scrollToDoctorAvailability();
+    }, 200);
   }
 
   scrollToDoctorAvailability() {
     setTimeout(() => {
       const element = document.getElementById('doctor-availability');
+      console.log('Looking for doctor-availability element:', element);
       if (element) {
+        console.log('Found element, scrolling to it');
         element.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        console.log('doctor-availability element not found');
       }
     }, 100);
   }

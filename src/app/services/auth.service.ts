@@ -1,14 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
+import { ConfigService } from './config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private baseUrl = 'http://localhost:8081/auth';
-
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: ConfigService) {}
 
   login(email: string, password: string): Observable<string> {
     const headers = new HttpHeaders({
@@ -17,7 +16,7 @@ export class AuthService {
     
     const loginData = { userEmail: email, password: password };
     
-    return this.http.post(`${this.baseUrl}/login`, loginData, { 
+    return this.http.post(`${this.config.authApiUrl}/login`, loginData, { 
       headers, 
       responseType: 'text' 
     }).pipe(
@@ -39,10 +38,9 @@ export class AuthService {
       'Content-Type': 'application/json'
     });
     
-    console.log('Register request to:', `${this.baseUrl}/register`);
-    console.log('Register data:', userData);
+
     
-    return this.http.post(`${this.baseUrl}/register`, userData, { 
+    return this.http.post(`${this.config.authApiUrl}/register`, userData, { 
       headers, 
       responseType: 'text' 
     }).pipe(
@@ -80,7 +78,6 @@ export class AuthService {
   extractUserNameFromToken(token: string): string | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('JWT payload:', payload);
       return payload.name || payload.fullName || payload.username || null;
     } catch (error) {
       console.error('Error extracting name from token:', error);
@@ -91,7 +88,6 @@ export class AuthService {
   extractUserIdFromToken(token: string): number | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('JWT payload for ID extraction:', payload);
       
       // Try to get numeric ID from various possible fields
       const id = payload.userId || payload.id || payload.user_id;
@@ -136,11 +132,7 @@ export class AuthService {
   }
 
   checkUserExists(email: string): Observable<boolean> {
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json'
-    });
-    
-    return this.http.get<boolean>(`${this.baseUrl}/user-exists?email=${email}`, { headers }).pipe(
+    return this.http.get<boolean>(`${this.config.authApiUrl}/user-exists?email=${email}`).pipe(
       catchError(error => {
         console.error('User check error:', error);
         return throwError(() => new Error('Unable to verify user'));
@@ -149,12 +141,7 @@ export class AuthService {
   }
 
   getUserByPhone(phone: string): Observable<any> {
-    const token = this.getToken();
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
-    
-    return this.http.get<any>(`${this.baseUrl}/by-phone/${phone}`, { headers }).pipe(
+    return this.http.get<any>(`${this.config.authApiUrl}/by-phone/${phone}`).pipe(
       catchError(error => {
         console.error('Get user by phone error:', error);
         return throwError(() => error);
@@ -163,12 +150,7 @@ export class AuthService {
   }
 
   getUserByEmail(email: string): Observable<any> {
-    const token = this.getToken();
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
-    
-    return this.http.get<any>(`${this.baseUrl}/by-email/${email}`, { headers }).pipe(
+    return this.http.get<any>(`${this.config.authApiUrl}/by-email/${email}`).pipe(
       catchError(error => {
         console.error('Get user by email error:', error);
         return throwError(() => error);

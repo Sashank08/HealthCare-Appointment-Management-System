@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, of, map } from 'rxjs';
-import { AuthService } from '../services/auth.service';
+import { ConfigService } from '../services/config.service';
  
 export interface Appointment {
   id?: number;
@@ -50,69 +50,65 @@ export interface AppointmentCancelInfo {
 export interface UserDTO {
   id: number;
   name: string;
-  phone: number;
-  email?: string;
+  email: string;
+  specialisation?: string;
 }
- 
+
 @Injectable({
   providedIn: 'root'
 })
 export class AppointmentService {
-  private baseUrl = 'http://localhost:8081/appointments';
-  private getHttpOptions() {
-    const token = this.authService.getToken();
-    return {
-      headers: new HttpHeaders({
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
-      })
-    };
-  }
- 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient, private config: ConfigService) {}
  
   bookAppointment(request: AppointmentRequest): Observable<Appointment> {
-    return this.http.post<Appointment>(`${this.baseUrl}/book`, request, this.getHttpOptions());
+    return this.http.post<Appointment>(`${this.config.appointmentsApiUrl}/book`, request);
   }
  
   updateAppointment(id: number, request: AppointmentUpdateRequest): Observable<Appointment> {
-    return this.http.put<Appointment>(`${this.baseUrl}/update/${id}`, request, this.getHttpOptions());
+    return this.http.put<Appointment>(`${this.config.appointmentsApiUrl}/update/${id}`, request);
   }
  
   cancelAppointment(id: number, cancelInfo: AppointmentCancelInfo): Observable<any> {
-    const options = this.getHttpOptions();
-    return this.http.delete<any>(`${this.baseUrl}/cancel/${id}`, {
+    return this.http.delete<any>(`${this.config.appointmentsApiUrl}/cancel/${id}`, {
       body: cancelInfo,
-      headers: options.headers,
       responseType: 'text' as 'json'
     });
   }
- 
+
   getAppointmentsByPatient(patientId: number): Observable<Appointment[]> {
-    return this.http.get<Appointment[]>(`${this.baseUrl}/patient/${patientId}`, this.getHttpOptions());
+    return this.http.get<Appointment[]>(`${this.config.appointmentsApiUrl}/patient/${patientId}`).pipe(
+      catchError(error => {
+        console.error('Patient appointments API error:', error);
+        return of([]);
+      })
+    );
   }
- 
+
   getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
-    return this.http.get<Appointment[]>(`${this.baseUrl}/doctor/${doctorId}`, this.getHttpOptions());
+    return this.http.get<Appointment[]>(`${this.config.appointmentsApiUrl}/doctor/${doctorId}`).pipe(
+      catchError(error => {
+        console.error('Doctor appointments API error:', error);
+        return of([]);
+      })
+    );
   }
- 
-  getUpcomingAppointment(patientId: number, date: string): Observable<Appointment> {
-    return this.http.get<Appointment>(`${this.baseUrl}/upcoming?patientId=${patientId}&date=${date}`, this.getHttpOptions());
-  }
- 
+
   getDoctorsBySpecialisation(specialisation: string): Observable<UserDTO[]> {
-    return this.http.get<UserDTO[]>(`${this.baseUrl}/by-specialisation/${specialisation}`, this.getHttpOptions());
+    return this.http.get<UserDTO[]>(`${this.config.appointmentsApiUrl}/by-specialisation/${specialisation}`).pipe(
+      catchError(error => {
+        console.error('Doctors by specialisation API error:', error);
+        return of([]);
+      })
+    );
   }
 
   getAvailableSlots(doctorId: number, date: string): Observable<string[]> {
-    return this.http.get<string[]>(`${this.baseUrl}/available-slots/${doctorId}/${date}`, this.getHttpOptions()).pipe(
+    return this.http.get<string[]>(`${this.config.appointmentsApiUrl}/available-slots/${doctorId}/${date}`).pipe(
       catchError(error => {
         console.error('Available slots API error:', error);
         return of([]);
       })
     );
   }
-
-
 }
  
