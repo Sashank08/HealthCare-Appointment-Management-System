@@ -1,23 +1,25 @@
-<div class="container-fluid py-4">
+<div class="bg-gradient-light min-vh-100 py-5">
   <div class="container">
-    <div class="text-center mb-5">
-      <h1 class="display-4 fw-bold text-white mb-3">
-        <i class="fas fa-hospital-user me-3"></i>Healthcare Appointment System
-      </h1>
-      <p class="lead text-white-50">Book, Update, and Manage Your Medical Appointments</p>
+    <div class="bg-gradient-primary text-white p-4 rounded-top text-center mb-0">
+      <h1 class="display-5 fw-bold mb-2"><i class="fas fa-calendar-plus me-3"></i>Healthcare Appointment System</h1>
+      <p class="lead mb-0 opacity-75">Book, Update, and Manage Your Medical Appointments</p>
     </div>
 
-    <!-- Success/Error Messages -->
-    <div *ngIf="successMessage" class="alert alert-success text-center mb-4">
-      <i class="fas fa-check-circle me-2"></i>{{successMessage}}
-    </div>
-    <div *ngIf="errorMessage" class="alert alert-danger text-center mb-4">
-      <i class="fas fa-exclamation-circle me-2"></i>{{errorMessage}}
-    </div>
+    <div class="bg-white rounded-bottom shadow p-4">
+      <!-- Success/Error Messages -->
+      <div *ngIf="successMessage" class="alert alert-success alert-custom text-center mb-4">
+        <i class="fas fa-check-circle me-2"></i>{{successMessage}}
+      </div>
+      <div *ngIf="errorMessage" class="alert alert-danger alert-custom text-center mb-4">
+        <i class="fas fa-exclamation-circle me-2"></i>{{errorMessage}}
+      </div>
 
-    <!-- Book Appointment Form -->
-    <div class="card shadow border-0 mb-5">
-      <div class="card-body p-5">
+      <!-- Book Appointment Form -->
+      <div class="card border-0 shadow rounded-3 mb-5 card-hover">
+        <div class="card-header bg-success text-white border-0 p-4">
+          <h3 class="mb-0 fw-bold"><i class="fas fa-calendar-plus me-2"></i>Book New Appointment</h3>
+        </div>
+        <div class="card-body p-5">
         <div class="text-center mb-4">
           <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle p-3 mb-3">
             <i class="fas fa-calendar-plus fa-2x text-primary"></i>
@@ -28,16 +30,20 @@
         <form #bookForm="ngForm" (ngSubmit)="onBookAppointment(bookForm.value)">
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="form-label">Patient ID <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="patientId" 
+              <label class="form-label fw-bold">
+                <i class="fas fa-user me-2 text-info"></i>Patient ID <span class="text-danger">*</span>
+              </label>
+                             <input type="number" class="form-control form-control-enhanced rounded-3" name="patientId" 
                      [(ngModel)]="patientId" 
                      placeholder="Enter Patient ID" 
                      [readonly]="patientId > 0"
                      required>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Patient Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="patientName" 
+              <label class="form-label fw-bold">
+                <i class="fas fa-user-circle me-2 text-success"></i>Patient Name <span class="text-danger">*</span>
+              </label>
+                             <input type="text" class="form-control form-control-enhanced rounded-3" name="patientName" 
                      [(ngModel)]="patientName" 
                      placeholder="Enter Patient Name" 
                      [readonly]="patientName !== ''"
@@ -46,8 +52,10 @@
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="form-label">Patient Email <span class="text-danger">*</span></label>
-              <input type="email" class="form-control" name="patientEmail" 
+              <label class="form-label fw-bold">
+                <i class="fas fa-envelope me-2 text-primary"></i>Patient Email <span class="text-danger">*</span>
+              </label>
+                             <input type="email" class="form-control form-control-enhanced rounded-3" name="patientEmail" 
                      [(ngModel)]="patientEmail" 
                      placeholder="Enter Patient Email" 
                      [readonly]="patientEmail !== ''"
@@ -110,11 +118,32 @@
             <input type="text" class="form-control" name="reason" placeholder="Enter reason for appointment" ngModel>
           </div>
           <div class="text-center">
-            <button type="submit" class="btn btn-primary btn-lg px-5 py-3">
-              <i class="fas fa-calendar-plus me-2"></i>Book My Appointment
-              <i class="fas fa-arrow-right ms-2"></i>
+            <button type="submit" class="btn btn-primary btn-lg btn-hover fw-bold px-5 py-3 rounded-3" [disabled]="isBookingAppointment">
+              @if (isBookingAppointment) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <i class="fas fa-search me-2"></i>Checking Availability...
+              } @else {
+                <i class="fas fa-calendar-plus me-2"></i>Book My Appointment
+                <i class="fas fa-arrow-right ms-2"></i>
+              }
             </button>
           </div>
+          
+          @if (isBookingAppointment) {
+            <div class="text-center mt-3">
+              <div class="alert alert-info d-inline-block">
+                <div class="d-flex align-items-center">
+                  <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <div>
+                    <strong>Processing your appointment...</strong><br>
+                    <small class="text-muted">Checking doctor availability and sending notifications</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         </form>
       </div>
     </div>
@@ -178,11 +207,32 @@
             </div>
           </div>
           <div class="text-center">
-            <button type="submit" class="btn btn-warning btn-lg px-5 py-3">
-              <i class="fas fa-edit me-2"></i>Update My Appointment
-              <i class="fas fa-check ms-2"></i>
+            <button type="submit" class="btn btn-warning btn-lg px-5 py-3" [disabled]="isReschedulingAppointment">
+              @if (isReschedulingAppointment) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <i class="fas fa-search me-2"></i>Checking Availability...
+              } @else {
+                <i class="fas fa-edit me-2"></i>Update My Appointment
+                <i class="fas fa-check ms-2"></i>
+              }
             </button>
           </div>
+          
+          @if (isReschedulingAppointment) {
+            <div class="text-center mt-3">
+              <div class="alert alert-warning d-inline-block">
+                <div class="d-flex align-items-center">
+                  <div class="spinner-border spinner-border-sm text-warning me-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <div>
+                    <strong>Rescheduling your appointment...</strong><br>
+                    <small class="text-muted">Checking doctor availability and sending notifications</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         </form>
       </div>
     </div>
@@ -237,11 +287,32 @@
             <input type="text" class="form-control" name="reason" placeholder="Enter reason for cancellation" ngModel required>
           </div>
           <div class="text-center">
-            <button type="submit" class="btn btn-danger btn-lg px-5 py-3">
-              <i class="fas fa-times-circle me-2"></i>Cancel My Appointment
-              <i class="fas fa-exclamation-triangle ms-2"></i>
+            <button type="submit" class="btn btn-danger btn-lg px-5 py-3" [disabled]="isCancellingAppointment">
+              @if (isCancellingAppointment) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <i class="fas fa-hourglass-half me-2"></i>Cancelling...
+              } @else {
+                <i class="fas fa-times-circle me-2"></i>Cancel My Appointment
+                <i class="fas fa-exclamation-triangle ms-2"></i>
+              }
             </button>
           </div>
+          
+          @if (isCancellingAppointment) {
+            <div class="text-center mt-3">
+              <div class="alert alert-danger d-inline-block">
+                <div class="d-flex align-items-center">
+                  <div class="spinner-border spinner-border-sm text-danger me-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <div>
+                    <strong>Cancelling your appointment...</strong><br>
+                    <small class="text-muted">Cancelling appointment and sending notifications</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         </form>
       </div>
     </div>

@@ -9,7 +9,7 @@ import { AvailabilityService, Appointment } from '../doctor-availability/doctor-
   selector: 'app-consultation-records',
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './consultation-records.html',
-  styleUrls: ['./consultation-records.css']
+  styleUrls: ['./consultation-records.css', '../shared/shared-styles.css']
 })
 export class ConsultationRecordsComponent implements OnInit, OnDestroy {
   private consultationService = inject(ConsultationRecordsService);
@@ -204,14 +204,17 @@ export class ConsultationRecordsComponent implements OnInit, OnDestroy {
   }
 
   loadDoctorAppointments(): void {
+    console.log('Loading appointments for doctor ID:', this.currentDoctorId);
     this.availabilityService.getAppointmentsByDoctor(this.currentDoctorId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (appointments) => {
           this.doctorAppointments = appointments;
+          console.log('Successfully loaded appointments:', appointments.length);
         },
         error: (error) => {
           console.error('Error loading doctor appointments:', error);
+          console.error('Full error details:', error);
         }
       });
   }

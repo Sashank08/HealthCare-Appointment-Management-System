@@ -9,7 +9,7 @@ import { AuthService } from '../services/auth.service';
   standalone: true,
   imports: [FormsModule, CommonModule],
   templateUrl: './appointment-scheduling.html',
-  styleUrl: './appointment-scheduling.css'
+  styleUrls: ['./appointment-scheduling.css', '../shared/shared-styles.css']
 })
 export class AppointmentScheduling {
   appointments: Appointment[] = [];
@@ -42,6 +42,11 @@ export class AppointmentScheduling {
   patientName: string = '';
   patientEmail: string = '';
   userRole: string | null = null;
+  
+  // Loading states
+  isBookingAppointment: boolean = false;
+  isReschedulingAppointment: boolean = false;
+  isCancellingAppointment: boolean = false;
 
   timeSlots = [
     { value: '09:00-10:00', label: '09:00 AM - 10:00 AM', startTime: '09:00', endTime: '10:00' },
@@ -95,8 +100,11 @@ export class AppointmentScheduling {
  
   bookAppointment(request: AppointmentRequest): void {
     this.clearMessages();
+    this.isBookingAppointment = true;
+    
     this.appointmentService.bookAppointment(request).subscribe({
       next: (appointment) => {
+        this.isBookingAppointment = false;
         alert('Appointment Booked Successfully! ID: ' + appointment.id);
         this.appointments.push(appointment);
       },
@@ -145,6 +153,8 @@ export class AppointmentScheduling {
           }
         }
         
+        this.isBookingAppointment = false;
+        
         // Scroll to show error message
         setTimeout(() => {
           const errorElement = document.querySelector('.alert-danger');
@@ -158,8 +168,11 @@ export class AppointmentScheduling {
  
   updateAppointment(id: number, request: AppointmentUpdateRequest): void {
     this.clearMessages();
+    this.isReschedulingAppointment = true;
+    
     this.appointmentService.updateAppointment(id, request).subscribe({
       next: (appointment) => {
+        this.isReschedulingAppointment = false;
         alert('Appointment Rescheduled Successfully!');
         const index = this.appointments.findIndex(a => a.id === id);
         if (index !== -1) {
@@ -167,6 +180,7 @@ export class AppointmentScheduling {
         }
       },
       error: (error) => {
+        this.isReschedulingAppointment = false;
         this.errorMessage = 'Failed to update appointment. Please check the ID.';
         console.error('Error updating appointment:', error);
       }
@@ -175,8 +189,11 @@ export class AppointmentScheduling {
  
   cancelAppointment(id: number, cancelInfo: AppointmentCancelInfo): void {
     this.clearMessages();
+    this.isCancellingAppointment = true;
+    
     this.appointmentService.cancelAppointment(id, cancelInfo).subscribe({
       next: (response) => {
+        this.isCancellingAppointment = false;
         alert('Appointment Cancelled Successfully!');
         this.appointments = this.appointments.filter(a => a.id !== id);
       },
@@ -199,6 +216,7 @@ export class AppointmentScheduling {
           }
         } else if (error.status === 200 || error.status === 204) {
           // Sometimes DELETE requests return 200/204 but Angular treats as error
+          this.isCancellingAppointment = false;
           alert('Appointment Cancelled Successfully!');
           this.appointments = this.appointments.filter(a => a.id !== id);
         } else {
@@ -210,6 +228,8 @@ export class AppointmentScheduling {
             this.errorMessage = 'Failed to cancel appointment. Please try again.';
           }
         }
+        
+        this.isCancellingAppointment = false;
       }
     });
   }

@@ -1,20 +1,20 @@
-<div class="professional-container">
-  
-  <!-- Professional Header -->
-  <div class="page-header">
-    <div class="header-content">
-      <h1 class="page-title">
+<div class="bg-gradient-light min-vh-100 py-5">
+  <div class="container">
+    <div class="bg-gradient-primary text-white p-4 rounded-top text-center mb-0">
+      <h1 class="display-5 fw-bold mb-2">
+        <i class="fas fa-clock me-3"></i>
         <span *ngIf="userRole === 'DOCTOR'">Doctor Availability Management</span>
         <span *ngIf="userRole === 'PATIENT'">Find Available Doctors</span>
         <span *ngIf="!userRole">Doctor Availability System</span>
       </h1>
-      <p class="page-subtitle">
+      <p class="lead mb-0 opacity-75">
         <span *ngIf="userRole === 'DOCTOR'">Manage your appointment schedule and availability slots</span>
         <span *ngIf="userRole === 'PATIENT'">Search and book appointments with available doctors</span>
         <span *ngIf="!userRole">Please login to access personalized features</span>
       </p>
     </div>
-  </div>
+    
+    <div class="bg-white rounded-bottom shadow p-4">
  
   <div class="search-section">
     <div class="section-header">

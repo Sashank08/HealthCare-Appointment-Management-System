@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { ConfigService } from './config.service';
 
 export interface Consultation {
   consultationId?: number;
@@ -22,8 +23,7 @@ export interface ExceptionResponse {
 })
 export class ConsultationRecordsService {
   private http = inject(HttpClient);
-  
-  private readonly baseUrl = 'http://localhost:8081/consult';
+  private config = inject(ConfigService);
   
   private loadingSubject = new BehaviorSubject<boolean>(false);
   private submittingSubject = new BehaviorSubject<boolean>(false);
@@ -33,28 +33,9 @@ export class ConsultationRecordsService {
   
   private consultationsCache = new Map<number, Consultation[]>();
 
-  private getTokenFromStorage(): string {
-    const token = localStorage.getItem('authToken');
-    return token ? `Bearer ${token}` : '';
-  }
-
-  private getAuthHeaders(): HttpHeaders {
-    const authToken = this.getTokenFromStorage();
+  private getHeadersForText(): HttpHeaders {
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': authToken,
-      'Accept': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    });
-  }
-
-  private getAuthHeadersForText(): HttpHeaders {
-    const authToken = this.getTokenFromStorage();
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': authToken,
       'Accept': 'text/plain'
     });
   }
@@ -63,11 +44,11 @@ export class ConsultationRecordsService {
     this.submittingSubject.next(true);
     
     const options = {
-      headers: this.getAuthHeadersForText(),
+      headers: this.getHeadersForText(),
       responseType: 'text' as 'json'
     };
     
-    return this.http.post<string>(`${this.baseUrl}/save-consultation`, consultation, options).pipe(
+    return this.http.post<string>(`${this.config.consultationApiUrl}/save-consultation`, consultation, options).pipe(
       tap(() => {
         this.clearPatientCache(consultation.patientId);
         this.submittingSubject.next(false);
@@ -90,11 +71,9 @@ export class ConsultationRecordsService {
 
     this.loadingSubject.next(true);
     
-    const options = {
-      headers: this.getAuthHeaders()
-    };
+
     
-    return this.http.get<Consultation[]>(`${this.baseUrl}/view-mh/${patientId}`, options).pipe(
+    return this.http.get<Consultation[]>(`${this.config.consultationApiUrl}/view-mh/${patientId}`).pipe(
       tap(consultations => {
         this.consultationsCache.set(patientId, consultations);
         this.loadingSubject.next(false);
