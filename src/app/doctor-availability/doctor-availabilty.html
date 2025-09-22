@@ -1,228 +1,559 @@
 <div class="container-fluid bg-light min-vh-100 py-4">
   <div class="container">
     <!-- Header -->
-    <div class="bg-primary text-white p-4 rounded-top text-center">
-      <h1 class="h2 mb-2">
-        <i class="fas fa-clock me-2"></i>
-        <span *ngIf="userRole === 'DOCTOR'">Doctor Availability Management</span>
-        <span *ngIf="userRole === 'PATIENT'">Find Available Doctors</span>
-        <span *ngIf="!userRole">Doctor Availability System</span>
-      </h1>
-      <p class="mb-0 opacity-75">
-        <span *ngIf="userRole === 'DOCTOR'">Manage your appointment schedule and availability slots</span>
-        <span *ngIf="userRole === 'PATIENT'">Search and book appointments with available doctors</span>
-        <span *ngIf="!userRole">Please login to access personalized features</span>
-      </p>
+    <div class="card mb-4 border-0 shadow-sm">
+      <div class="card-header bg-primary text-white text-center py-4">
+        <h1 class="h2 mb-2">
+          <i class="fas fa-clock me-2"></i>
+          <span *ngIf="userRole === 'DOCTOR'">Doctor Availability Management</span>
+          <span *ngIf="userRole === 'PATIENT'">Find Available Doctors</span>
+          <span *ngIf="!userRole">Doctor Availability System</span>
+        </h1>
+        <p class="mb-0 opacity-75">
+          <span *ngIf="userRole === 'DOCTOR'">Manage your appointment schedule and availability slots</span>
+          <span *ngIf="userRole === 'PATIENT'">Search and book appointments with available doctors</span>
+          <span *ngIf="!userRole">Please login to access personalized features</span>
+        </p>
+      </div>
     </div>
-    
-    <div class="bg-white rounded-bottom shadow p-4">
-      <!-- Search Section -->
-      <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <h3 class="h4 mb-0">
-          <span *ngIf="userRole === 'DOCTOR'">My Schedule</span>
-          <span *ngIf="userRole === 'PATIENT'">Find Doctors</span>
-          <span *ngIf="!userRole">Search Availability</span>
-        </h3>
-        <div *ngIf="userRole === 'DOCTOR'" class="btn-group" role="group">
-          <button class="btn btn-sm" [class.btn-primary]="!showAppointments" [class.btn-outline-primary]="showAppointments" (click)="showAppointments = false">Availability</button>
-          <button class="btn btn-sm" [class.btn-primary]="showAppointments" [class.btn-outline-primary]="!showAppointments" (click)="toggleAppointmentsView()">Appointments</button>
-        </div>
-      </div>
-      
-      <div class="row g-3 mb-4">
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">
-            <span *ngIf="userRole === 'PATIENT'">Doctor ID (Optional)</span>
-            <span *ngIf="userRole === 'DOCTOR'">Your Doctor ID</span>
-            <span *ngIf="!userRole">Doctor ID</span>
-          </label>
-          <input type="number" [(ngModel)]="searchDoctorID" class="form-control" 
-                 [placeholder]="userRole === 'DOCTOR' ? 'Auto-filled' : userRole === 'PATIENT' ? 'Leave empty for all' : 'Enter Doctor ID'" 
-                 min="1">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">From Date</label>
-          <input type="date" [(ngModel)]="startDate" class="form-control">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">To Date</label>
-          <input type="date" [(ngModel)]="endDate" class="form-control">
-        </div>
-        <div class="col-md-3 d-flex align-items-end">
-          <button (click)="searchAvailability()" class="btn btn-primary w-100" [disabled]="isLoading">
-            <span *ngIf="!isLoading">
-              <span *ngIf="userRole === 'DOCTOR'">View Schedule</span>
-              <span *ngIf="userRole === 'PATIENT'">Search Doctors</span>
-              <span *ngIf="!userRole">Search</span>
-            </span>
-            <span *ngIf="isLoading">Searching...</span>
-          </button>
-        </div>
-      </div>
 
-      <!-- Feedback Message -->
-      <div *ngIf="message" class="alert" [class.alert-success]="messageType === 'success'" [class.alert-danger]="messageType === 'error'" [class.alert-warning]="messageType === 'warning'">
-        <i class="fas" [class.fa-check-circle]="messageType === 'success'" [class.fa-exclamation-triangle]="messageType === 'warning'" [class.fa-times-circle]="messageType === 'error'"></i>
-        {{ message }}
-      </div>
+    <!-- Main Content -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <!-- Doctor Tabs -->
+        <div *ngIf="userRole === 'DOCTOR'" class="mb-4">
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" [class.active]="selectedTabIndex === 0" 
+                      (click)="selectedTabIndex = 0" type="button">
+                <i class="fas fa-calendar-alt me-2"></i>My Schedule
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" [class.active]="selectedTabIndex === 1" 
+                      (click)="toggleAppointmentsView()" type="button">
+                <i class="fas fa-users me-2"></i>Appointments
+                <span *ngIf="appointments.length > 0" class="badge bg-primary ms-1">{{ appointments.length }}</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" [class.active]="selectedTabIndex === 2" 
+                      (click)="selectedTabIndex = 2" type="button">
+                <i class="fas fa-plus-circle me-2"></i>Add Availability
+              </button>
+            </li>
+          </ul>
+        </div>
 
-      <!-- Appointments View -->
-      <div *ngIf="showAppointments && userRole === 'DOCTOR'">
-        <h4 class="mb-3">Scheduled Appointments</h4>
-        <div *ngIf="appointments.length > 0" class="alert alert-info">
-          <strong>{{appointments.length}} Total Appointments</strong>
-        </div>
-        <div *ngIf="appointments.length > 0" class="table-responsive">
-          <table class="table table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>#</th>
-                <th>Patient</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let appointment of appointments; let i = index">
-                <td>{{ i + 1 }}</td>
-                <td>{{ appointment.patientName }}</td>
-                <td>{{ appointment.date }}</td>
-                <td>{{ appointment.slot }}</td>
-                <td>
-                  <span class="badge" 
-                        [class.bg-success]="appointment.status === 'Completed'"
-                        [class.bg-warning]="appointment.status === 'In Progress'"
-                        [class.bg-primary]="appointment.status === 'Upcoming'">
-                    {{ appointment.status }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div *ngIf="appointments.length === 0" class="text-center py-5 text-muted">
-          <i class="fas fa-calendar-times fa-3x mb-3"></i>
-          <p>No appointments scheduled yet.</p>
-        </div>
-      </div>
 
-      <!-- Availability View -->
-      <div *ngIf="!showAppointments && availabilities && availabilities.length > 0">
-        <h4 class="mb-3">
-          <span *ngIf="userRole === 'DOCTOR'">Your Availability Schedule</span>
-          <span *ngIf="userRole === 'PATIENT'">Available Doctors</span>
-          <span *ngIf="!userRole">Available Schedules</span>
-        </h4>
-        
-        <div *ngIf="userRole === 'PATIENT'" class="alert alert-success">
-          <strong>Found {{availabilities.length}} available doctor(s)</strong> - Click "Book" to schedule your appointment
-        </div>
-        
-        <div *ngIf="userRole === 'DOCTOR'" class="alert alert-warning">
-          <strong>Schedule Overview:</strong> Managing {{availabilities.length}} availability slot(s)
-        </div>
-        
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>#</th>
-                <th>Doctor</th>
-                <th>Date</th>
-                <th>Available Slots</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let availability of availabilities; let i = index">
-                <td>{{ i + 1 }}</td>
-                <td>
-                  <div>
-                    <strong>{{ availability.doctorName || 'Dr. Atul Sahu' }}</strong><br>
-                    <small class="text-muted">ID: {{ availability.doctorID }}</small><br>
-                    <span *ngIf="availability.specialty" class="badge bg-info">{{ availability.specialty }}</span>
-                  </div>
-                </td>
-                <td>{{ availability.date }}</td>
-                <td>
-                  <div class="d-flex flex-wrap gap-1">
-                    <span *ngFor="let slot of availability.timeSlots" class="badge bg-light text-dark border">{{ slot }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="btn-group-vertical btn-group-sm" role="group">
-                    <button *ngIf="canManageAvailability() && isCurrentDoctor(availability.doctorID)" 
-                            (click)="openUpdateModal(availability)" class="btn btn-warning btn-sm">Edit</button>
-                    <button *ngIf="canManageAvailability() && isCurrentDoctor(availability.doctorID)" 
-                            (click)="deleteAvailability(availability.doctorID, availability.date)" class="btn btn-danger btn-sm">Delete</button>
-                    <button *ngIf="userRole === 'PATIENT'" 
-                            class="btn btn-success btn-sm" (click)="bookAppointment(availability)">Book</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <!-- Add Availability Form -->
-      <div *ngIf="canManageAvailability()" class="mt-5">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Add New Availability</h5>
-          </div>
-          <div class="card-body">
-            <div class="alert alert-info">
-              <strong>Doctor Portal:</strong> Create your availability slots for patient appointments
+        <!-- Loading Bar -->
+        <div *ngIf="isLoading" class="progress mb-3" style="height: 3px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+        </div>
+
+        <!-- Doctor Schedule Tab -->
+        <div *ngIf="userRole === 'DOCTOR' && selectedTabIndex === 0">
+          <!-- Search Section -->
+          <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-gradient-primary text-white position-relative overflow-hidden">
+              <div class="position-absolute top-0 start-0 w-100 h-100 opacity-10">
+                <i class="fas fa-calendar-search fa-4x position-absolute" style="top: -5px; right: -5px;"></i>
+              </div>
+              <div class="position-relative">
+                <h5 class="mb-1 fw-bold">
+                  <i class="fas fa-calendar-week me-2"></i>My Schedule Overview
+                </h5>
+                <small class="opacity-90">View and manage your availability calendar</small>
+              </div>
             </div>
-            <form (ngSubmit)="onSubmit()" #addForm="ngForm">
-              <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                  <label for="doctorID" class="form-label fw-semibold">Doctor ID <span class="text-danger">*</span></label>
-                  <input type="number" id="doctorID" name="doctorID" [(ngModel)]="doctorID" required min="1" 
-                         class="form-control" readonly>
-                  <div class="form-text">Auto-filled from your profile</div>
+            <div class="card-body p-4">
+              <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
+                <div class="row g-3">
+                  <div class="col-md-4" style="display: none;">
+                    <input type="number" class="form-control" formControlName="doctorID" readonly>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold text-dark mb-2">
+                      <i class="fas fa-calendar-alt text-primary me-2"></i>From Date
+                    </label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-primary text-white border-0">
+                        <i class="fas fa-calendar"></i>
+                      </span>
+                      <input type="date" class="form-control border-start-0" formControlName="startDate">
+                    </div>
+                    <div *ngIf="searchForm.get('startDate')?.hasError('required') && searchForm.get('startDate')?.touched" 
+                         class="text-danger small mt-1">
+                      <i class="fas fa-exclamation-circle me-1"></i>Start date is required
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold text-dark mb-2">
+                      <i class="fas fa-calendar-alt text-primary me-2"></i>To Date
+                    </label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-primary text-white border-0">
+                        <i class="fas fa-calendar"></i>
+                      </span>
+                      <input type="date" class="form-control border-start-0" formControlName="endDate">
+                    </div>
+                    <div *ngIf="searchForm.get('endDate')?.hasError('required') && searchForm.get('endDate')?.touched" 
+                         class="text-danger small mt-1">
+                      <i class="fas fa-exclamation-circle me-1"></i>End date is required
+                    </div>
+                  </div>
                 </div>
-                <div class="col-md-4">
-                  <label for="doctorName" class="form-label fw-semibold">Doctor Name</label>
-                  <input type="text" id="doctorName" name="doctorName" [(ngModel)]="doctorName" 
-                         class="form-control" readonly>
-                  <div class="form-text">Auto-filled from your profile</div>
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                  <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Select date range to view your scheduled availability
+                  </small>
+                  <button type="submit" class="btn btn-primary px-4 fw-semibold" [disabled]="isLoading">
+                    <i *ngIf="!isLoading" class="fas fa-search me-2"></i>
+                    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                    {{ isLoading ? 'Loading...' : 'View My Schedule' }}
+                  </button>
                 </div>
-                <div class="col-md-4">
-                  <label for="specialty" class="form-label fw-semibold">Specialty</label>
-                  <input type="text" id="specialty" name="specialty" [(ngModel)]="specialty" 
-                         class="form-control" readonly>
-                  <div class="form-text">Auto-filled from your profile</div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Availability Results -->
+          <div *ngIf="availabilities.length > 0" class="card">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">
+                <i class="fas fa-calendar-check me-2"></i>Your Availability Schedule
+                <span class="badge bg-light text-dark ms-2">{{ availabilities.length }} slot(s)</span>
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Doctor</th>
+                      <th>Date</th>
+                      <th>Available Slots</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let availability of availabilities">
+                      <td>
+                        <div>
+                          <strong>{{ availability.doctorName || 'Doctor' }}</strong><br>
+                          <span *ngIf="availability.specialty" class="badge bg-info">{{ availability.specialty }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        {{ availability.date }}
+                      </td>
+                      <td>
+                        <div class="d-flex flex-wrap gap-1">
+                          <span *ngFor="let slot of availability.timeSlots" class="badge bg-light text-dark border">
+                            {{ slot }}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="btn-group" *ngIf="isCurrentDoctor(availability.doctorID)">
+                          <button (click)="editAvailability(availability)" 
+                                  class="btn btn-warning btn-sm me-1">
+                            <i class="fas fa-edit me-1"></i>Edit
+                          </button>
+                          <button (click)="openDeleteModal(availability)" 
+                                  class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash me-1"></i>Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Results -->
+          <div *ngIf="!isLoading && availabilities.length === 0 && searchForm.dirty" class="card">
+            <div class="card-body text-center py-5">
+              <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+              <h3>No availability found</h3>
+              <p class="text-muted">Try adjusting your search criteria</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appointments Tab -->
+        <div *ngIf="userRole === 'DOCTOR' && selectedTabIndex === 1">
+          <div class="card border-0 shadow-lg">
+            <div class="card-header bg-gradient-warning text-dark position-relative overflow-hidden">
+              <div class="position-absolute top-0 start-0 w-100 h-100 opacity-10">
+                <i class="fas fa-user-clock fa-4x position-absolute" style="top: -5px; right: -5px;"></i>
+              </div>
+              <div class="position-relative">
+                <h4 class="mb-2 fw-bold">
+                  <i class="fas fa-users me-3"></i>Patient Appointments
+                  <span class="badge bg-dark ms-2 fs-6">{{ appointments.length }} total</span>
+                </h4>
+                <p class="mb-0 opacity-90">Manage your scheduled patient consultations</p>
+              </div>
+            </div>
+            <div class="card-body p-4">
+              <div *ngIf="appointments.length > 0">
+                <!-- Status Summary -->
+                <div class="row mb-4">
+                  <div class="col-md-4">
+                    <div class="bg-light rounded-3 p-3 text-center border-start border-success border-4">
+                      <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                      <div class="fw-bold">{{ getAppointmentsByStatus('Completed').length }}</div>
+                      <small class="text-muted">Completed</small>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="bg-light rounded-3 p-3 text-center border-start border-warning border-4">
+                      <i class="fas fa-clock text-warning fa-2x mb-2"></i>
+                      <div class="fw-bold">{{ getAppointmentsByStatus('In Progress').length }}</div>
+                      <small class="text-muted">In Progress</small>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="bg-light rounded-3 p-3 text-center border-start border-primary border-4">
+                      <i class="fas fa-calendar-plus text-primary fa-2x mb-2"></i>
+                      <div class="fw-bold">{{ getAppointmentsByStatus('Upcoming').length }}</div>
+                      <small class="text-muted">Upcoming</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Appointments Table -->
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="fw-bold">
+                          <i class="fas fa-user me-2 text-primary"></i>Patient
+                        </th>
+                        <th class="fw-bold">
+                          <i class="fas fa-calendar me-2 text-primary"></i>Date
+                        </th>
+                        <th class="fw-bold">
+                          <i class="fas fa-clock me-2 text-primary"></i>Time Slot
+                        </th>
+                        <th class="fw-bold">
+                          <i class="fas fa-info-circle me-2 text-primary"></i>Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let appointment of appointments" class="align-middle">
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 40px; height: 40px;">
+                              <i class="fas fa-user text-white"></i>
+                            </div>
+                            <div>
+                              <div class="fw-semibold">{{ appointment.patientName }}</div>
+                              <small class="text-muted">Appointment #{{ appointment.id }}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-alt text-primary me-2"></i>
+                            <span class="fw-semibold">{{ appointment.date | date:'mediumDate' }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span class="fw-semibold">{{ appointment.slot }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="badge px-3 py-2 fw-semibold" 
+                                [class]="'bg-' + getStatusColor(appointment.status)">
+                            <i class="fas me-1" 
+               [class.fa-check-circle]="appointment.status === 'Completed'"
+               [class.fa-clock]="appointment.status === 'In Progress'"
+               [class.fa-calendar-plus]="appointment.status === 'Upcoming'"></i>
+                            {{ appointment.status }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div class="mb-3">
-                <label for="date" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-                <input type="date" id="date" name="date" [(ngModel)]="date" required class="form-control">
-                <div class="form-text">Select a future date for availability</div>
+
+              <div *ngIf="appointments.length === 0" class="text-center py-5">
+                <div class="mb-4">
+                  <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                  <h3 class="text-muted">No Appointments Scheduled</h3>
+                  <p class="text-muted mb-4">Your patient appointments will appear here once they book slots</p>
+                  <div class="bg-light rounded-3 p-3 d-inline-block">
+                    <small class="text-muted">
+                      <i class="fas fa-lightbulb text-warning me-1"></i>
+                      Tip: Make sure you have published your availability for patients to book
+                    </small>
+                  </div>
+                </div>
               </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Select Time Slots (Max 8 slots) <span class="text-danger">*</span></label>
-                <div class="row g-2">
-                  <div class="col-md-3" *ngFor="let slot of availableTimeSlots">
-                    <button type="button" class="btn w-100" 
-                            [class.btn-primary]="isSlotSelected(slot)" 
-                            [class.btn-outline-primary]="!isSlotSelected(slot)" 
-                            (click)="toggleTimeSlot(slot)">
-                      {{ slot }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Availability Tab -->
+        <div *ngIf="userRole === 'DOCTOR' && selectedTabIndex === 2">
+          <div class="card border-0 shadow-lg">
+            <div class="card-header text-white position-relative overflow-hidden" 
+                 [class.bg-gradient-primary]="!isEditing" [class.bg-gradient-warning]="isEditing">
+              <div class="position-absolute top-0 start-0 w-100 h-100 opacity-10">
+                <i class="fas fa-calendar-plus fa-5x position-absolute" style="top: -10px; right: -10px;"></i>
+              </div>
+              <div class="position-relative">
+                <h4 class="mb-2 fw-bold">
+                  <i class="fas" [class.fa-plus-circle]="!isEditing" [class.fa-edit]="isEditing" class="me-3"></i>
+                  {{ isEditing ? 'Edit Availability' : 'Schedule Your Availability' }}
+                </h4>
+                <p class="mb-0 opacity-90">
+                  {{ isEditing ? 'Modify your existing availability slots' : 'Set your working hours and help patients book appointments with you' }}
+                </p>
+              </div>
+            </div>
+            
+            <div class="card-body p-4">
+              <form [formGroup]="availabilityForm" (ngSubmit)="onSubmit()">
+                <!-- Doctor Info Section -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <div class="bg-light rounded-3 p-3 border-start border-primary border-4">
+                      <h6 class="text-primary mb-2">
+                        <i class="fas fa-user-md me-2"></i>Doctor Information
+                      </h6>
+                      <div class="row">
+                        <div class="col-md-4" style="display: none;">
+                          <input type="number" class="form-control" formControlName="doctorID" readonly>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-semibold text-dark">Doctor Name</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                              <i class="fas fa-user text-primary"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" formControlName="doctorName" readonly>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-semibold text-dark">Specialty</label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                              <i class="fas fa-stethoscope text-primary"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" formControlName="specialty" readonly>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Date Selection -->
+                <div class="mb-4">
+                  <label class="form-label fw-bold text-dark mb-3">
+                    <i class="fas fa-calendar-alt text-primary me-2"></i>
+                    Select Date <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-primary text-white">
+                      <i class="fas fa-calendar"></i>
+                    </span>
+                    <input type="date" class="form-control" formControlName="date" 
+                           [min]="minDate">
+                  </div>
+                  <div *ngIf="availabilityForm.get('date')?.hasError('required') && availabilityForm.get('date')?.touched" 
+                       class="text-danger small mt-1">
+                    <i class="fas fa-exclamation-circle me-1"></i>Please select a date
+                  </div>
+                  <div class="form-text mt-2">
+                    <i class="fas fa-info-circle text-info me-1"></i>
+                    Choose a future date when you'll be available for appointments
+                  </div>
+                </div>
+
+                <!-- Time Slots Selection -->
+                <div class="mb-4">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0">
+                      <i class="fas fa-clock text-primary me-2"></i>
+                      Available Time Slots <span class="text-danger">*</span>
+                    </h6>
+                    <small class="text-muted">Maximum 8 slots per day</small>
+                  </div>
+                  
+                  <div class="row g-3">
+                    <div class="col-lg-3 col-md-4 col-sm-6" *ngFor="let slot of timeSlots">
+                      <button type="button" class="btn w-100 time-slot-btn position-relative" 
+                              [class.btn-primary]="slot.selected" 
+                              [class.btn-outline-primary]="!slot.selected"
+                              [class.shadow-sm]="!slot.selected"
+                              [class.shadow]="slot.selected"
+                              (click)="toggleTimeSlot(slot)">
+                        <div class="d-flex align-items-center justify-content-center">
+                          <i *ngIf="slot.selected" class="fas fa-check-circle me-2 text-white"></i>
+                          <i *ngIf="!slot.selected" class="far fa-clock me-2"></i>
+                          <span class="fw-semibold">{{ slot.display }}</span>
+                        </div>
+                        <div *ngIf="slot.selected" class="position-absolute top-0 end-0 p-1">
+                          <i class="fas fa-star text-warning" style="font-size: 0.7rem;"></i>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div *ngIf="getSelectedTimeSlots().length > 0" class="mt-3">
+                    <div class="alert alert-info border-0 bg-light-info">
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-2 fa-lg"></i>
+                        <span class="fw-semibold">{{ getSelectedTimeSlots().length }} time slot(s) selected</span>
+                      </div>
+                      <div class="mt-2">
+                        <small class="text-muted">Selected slots: </small>
+                        <span *ngFor="let slot of getSelectedTimeSlots(); let last = last" class="badge bg-primary me-1">
+                          {{ slot }}<span *ngIf="!last">,</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                  <div>
+                    <small class="text-muted">
+                      <i class="fas fa-shield-alt me-1"></i>
+                      Your availability will be visible to patients immediately
+                    </small>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button *ngIf="isEditing" type="button" class="btn btn-outline-secondary px-4" 
+                            (click)="cancelEdit()" [disabled]="isSubmitting">
+                      <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn px-4 fw-semibold" 
+                            [class.btn-success]="!isEditing" [class.btn-warning]="isEditing"
+                            [disabled]="isSubmitting || availabilityForm.invalid || getSelectedTimeSlots().length === 0">
+                      <i *ngIf="!isSubmitting" class="fas" [class.fa-plus-circle]="!isEditing" [class.fa-save]="isEditing" class="me-2"></i>
+                      <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+                      {{ isSubmitting ? (isEditing ? 'Updating...' : 'Publishing...') : (isEditing ? 'Update Availability' : 'Publish Availability') }}
                     </button>
                   </div>
                 </div>
-                <div *ngIf="selectedTimeSlots && selectedTimeSlots.length > 0" class="mt-2 p-2 bg-light rounded">
-                  <strong>Selected: </strong>{{ selectedTimeSlots.length }} slot(s)
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Patient View -->
+        <div *ngIf="userRole === 'PATIENT'">
+          <!-- Search Section -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">
+                <i class="fas fa-search me-2"></i>Find Available Doctors
+              </h5>
+            </div>
+            <div class="card-body">
+              <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
+                <div class="row g-3">
+                  <div class="col-md-4" style="display: none;">
+                    <input type="number" class="form-control" formControlName="doctorID">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">From Date</label>
+                    <input type="date" class="form-control" formControlName="startDate">
+                    <div *ngIf="searchForm.get('startDate')?.hasError('required') && searchForm.get('startDate')?.touched" 
+                         class="text-danger small">Start date is required</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">To Date</label>
+                    <input type="date" class="form-control" formControlName="endDate">
+                    <div *ngIf="searchForm.get('endDate')?.hasError('required') && searchForm.get('endDate')?.touched" 
+                         class="text-danger small">End date is required</div>
+                  </div>
                 </div>
+                <div class="d-flex justify-content-end mt-3">
+                  <button type="submit" class="btn btn-primary" [disabled]="isLoading">
+                    <i *ngIf="!isLoading" class="fas fa-search me-2"></i>
+                    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                    {{ isLoading ? 'Searching...' : 'Search Doctors' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Patient Results -->
+          <div *ngIf="availabilities.length > 0" class="card">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">
+                <i class="fas fa-hospital me-2"></i>Available Doctors
+                <span class="badge bg-light text-dark ms-2">{{ availabilities.length }} doctor(s) found</span>
+              </h5>
+              <small>Click "Book" to schedule your appointment</small>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Doctor</th>
+                      <th>Date</th>
+                      <th>Available Slots</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let availability of availabilities">
+                      <td>
+                        <div>
+                          <strong>{{ availability.doctorName || 'Doctor' }}</strong><br>
+                          <span *ngIf="availability.specialty" class="badge bg-info">{{ availability.specialty }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        {{ availability.date }}
+                      </td>
+                      <td>
+                        <div class="d-flex flex-wrap gap-1">
+                          <span *ngFor="let slot of availability.timeSlots" class="badge bg-light text-dark border">
+                            {{ slot }}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <button class="btn btn-primary btn-sm" (click)="bookAppointment(availability)">
+                          <i class="fas fa-calendar-plus me-1"></i>Book
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <button type="submit" class="btn btn-success" [disabled]="isSubmitting || !doctorID || !date || !selectedTimeSlots || selectedTimeSlots.length === 0">
-                <span *ngIf="!isSubmitting">Add Availability</span>
-                <span *ngIf="isSubmitting">Adding...</span>
-              </button>
-            </form>
+            </div>
+          </div>
+
+          <!-- No Results for Patient -->
+          <div *ngIf="!isLoading && availabilities.length === 0 && searchForm.dirty" class="card">
+            <div class="card-body text-center py-5">
+              <i class="fas fa-search-minus fa-3x text-muted mb-3"></i>
+              <h3>No doctors available</h3>
+              <p class="text-muted">Try adjusting your search criteria or date range</p>
+            </div>
           </div>
         </div>
       </div>
@@ -230,51 +561,98 @@
   </div>
 </div>
 
-<!-- Update Modal -->
-<div *ngIf="showUpdateModal" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title">Update Availability</h5>
-        <button type="button" class="btn-close btn-close-white" (click)="closeUpdateModal()"></button>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" [class.show]="showDeleteModal" [style.display]="showDeleteModal ? 'block' : 'none'" 
+     tabindex="-1" role="dialog" *ngIf="showDeleteModal">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white border-0">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDeleteModal()"></button>
       </div>
-      <div class="modal-body">
-        <form (ngSubmit)="onUpdateSubmit()" #updateForm="ngForm">
-          <div class="mb-3">
-            <label for="updateDoctorID" class="form-label fw-semibold">Doctor ID <span class="text-danger">*</span></label>
-            <input type="number" id="updateDoctorID" name="updateDoctorID" [(ngModel)]="updateDoctorID" required min="1" class="form-control">
-            <div class="form-text">Enter a valid doctor identification number</div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+          <h4>Are you sure?</h4>
+          <p class="text-muted mb-0">This will permanently delete the availability for:</p>
+          <p class="fw-bold text-dark">{{ deleteTarget?.date }}</p>
+          <p class="text-muted small">This action cannot be undone.</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 justify-content-center">
+        <button type="button" class="btn btn-secondary" (click)="closeDeleteModal()">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmDelete()">
+          <i class="fas fa-trash me-2"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showDeleteModal" *ngIf="showDeleteModal"></div>
+
+<!-- Success Modal -->
+<div class="modal fade" [class.show]="showSuccessModal" [style.display]="showSuccessModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="showSuccessModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-body text-center p-5">
+        <div class="mb-4">
+          <div class="success-icon mx-auto mb-3">
+            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
           </div>
-          <div class="mb-3">
-            <label for="updateDate" class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-            <input type="date" id="updateDate" name="updateDate" [(ngModel)]="updateDate" required class="form-control">
-            <div class="form-text">Select a future date for availability</div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Select Time Slots (Max 8 slots) <span class="text-danger">*</span></label>
-            <div class="row g-2">
-              <div class="col-md-3" *ngFor="let slot of availableTimeSlots">
-                <button type="button" class="btn btn-sm w-100" 
-                        [class.btn-primary]="isUpdateSlotSelected(slot)" 
-                        [class.btn-outline-primary]="!isUpdateSlotSelected(slot)" 
-                        (click)="toggleUpdateTimeSlot(slot)">
-                  {{ slot }}
-                </button>
+          <h3 class="text-success fw-bold mb-2">Availability Published!</h3>
+          <p class="text-muted mb-4">Your availability has been successfully added to the system. Patients can now book appointments with you.</p>
+          
+          <div class="bg-light rounded-3 p-3 mb-4">
+            <div class="row text-center">
+              <div class="col-4">
+                <i class="fas fa-calendar-check text-primary fa-2x mb-2"></i>
+                <div class="small fw-semibold">Date Set</div>
+              </div>
+              <div class="col-4">
+                <i class="fas fa-clock text-warning fa-2x mb-2"></i>
+                <div class="small fw-semibold">{{ getSelectedTimeSlots().length }} Slots</div>
+              </div>
+              <div class="col-4">
+                <i class="fas fa-users text-info fa-2x mb-2"></i>
+                <div class="small fw-semibold">Ready for Patients</div>
               </div>
             </div>
-            <div *ngIf="updateSelectedTimeSlots && updateSelectedTimeSlots.length > 0" class="mt-2 p-2 bg-light rounded">
-              <strong>Selected: </strong>{{ updateSelectedTimeSlots.length }} slot(s)
-            </div>
           </div>
-          <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" (click)="closeUpdateModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary" [disabled]="isSubmitting || !updateDoctorID || !updateDate || !updateSelectedTimeSlots || updateSelectedTimeSlots.length === 0">
-              <span *ngIf="!isSubmitting">Update Availability</span>
-              <span *ngIf="isSubmitting">Updating...</span>
-            </button>
-          </div>
-        </form>
+        </div>
+        
+        <button type="button" class="btn btn-success px-4 fw-semibold" (click)="closeSuccessModal()">
+          <i class="fas fa-arrow-left me-2"></i>Back to Schedule
+        </button>
       </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showSuccessModal" *ngIf="showSuccessModal"></div>
+
+<!-- Toast Notification -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+  <div class="toast" [class.show]="showToast" [class.fade]="!showToast" 
+       [class.bg-success]="toastType === 'success'"
+       [class.bg-danger]="toastType === 'error'"
+       [class.bg-warning]="toastType === 'warning'"
+       [class.bg-info]="toastType === 'info'"
+       *ngIf="showToast">
+    <div class="toast-header border-0">
+      <i class="fas me-2" 
+         [class.fa-check-circle]="toastType === 'success'"
+         [class.fa-exclamation-circle]="toastType === 'error'"
+         [class.fa-exclamation-triangle]="toastType === 'warning'"
+         [class.fa-info-circle]="toastType === 'info'"></i>
+      <strong class="me-auto text-white">{{ toastType | titlecase }}</strong>
+      <button type="button" class="btn-close btn-close-white" (click)="closeToast()"></button>
+    </div>
+    <div class="toast-body text-white fw-semibold">
+      {{ toastMessage }}
     </div>
   </div>
 </div>
