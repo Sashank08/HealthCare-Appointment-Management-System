@@ -1,12 +1,11 @@
-import { Component, Injectable } from '@angular/core';
+import { Component, OnInit, OnDestroy, Injectable } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { Router } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
-import { ConfigService } from '../services/config.service';
- 
+
 export interface Availability {
   doctorID: number;
   date: string;
@@ -24,584 +23,540 @@ export interface Appointment {
   status?: string;
   patientName?: string;
 }
- 
+
+export interface TimeSlot {
+  value: string;
+  display: string;
+  selected: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AvailabilityService {
-  constructor(private http: HttpClient, private config: ConfigService) {}
- 
+  private baseUrl = 'http://localhost:8081/api/v1/availability';
+  private appointmentsUrl = 'http://localhost:8081/appointments';
+
+  constructor(private http: HttpClient) {}
+
   getAvailabilityByDoctor(doctorID: number, startDate: string, endDate: string): Observable<Availability[]> {
-    return this.http.get<Availability[]>(`${this.config.availabilityApiUrl}/doctor/${doctorID}?startDate=${startDate}&endDate=${endDate}`);
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.get<Availability[]>(`${this.baseUrl}/doctor/${doctorID}?startDate=${startDate}&endDate=${endDate}`, { headers });
   }
- 
+
   addAvailability(availability: Availability): Observable<Availability> {
-    return this.http.post<Availability>(this.config.availabilityApiUrl, availability);
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.post<Availability>(this.baseUrl, availability, { headers });
   }
- 
+
   updateAvailability(doctorID: number, date: string, availability: Availability): Observable<Availability> {
-    return this.http.put<Availability>(`${this.config.availabilityApiUrl}/${doctorID}/${date}`, availability);
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.put<Availability>(`${this.baseUrl}/${doctorID}/${date}`, availability, { headers });
   }
- 
-  deleteAvailability(doctorID: number, date: string): Observable<any> {
-    return this.http.delete(`${this.config.availabilityApiUrl}/${doctorID}/${date}`);
+
+  deleteAvailability(doctorID: number, date: string): Observable<void> {
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.delete<void>(`${this.baseUrl}/${doctorID}/${date}`, { headers });
   }
 
   getAppointmentsByDoctor(doctorId: number): Observable<Appointment[]> {
-    return this.http.get<Appointment[]>(`${this.config.appointmentsApiUrl}/doctor/${doctorId}`);
+    const token = localStorage.getItem('authToken');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.get<Appointment[]>(`${this.appointmentsUrl}/doctor/${doctorId}`, { headers });
   }
 }
- 
+
 @Component({
   selector: 'app-doctor-availabilty',
-  imports: [CommonModule, FormsModule],
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './doctor-availabilty.html',
-  styleUrls: ['./doctor-availabilty.css', '../shared/shared-styles.css']
+  styleUrl: './doctor-availabilty.css'
 })
-export class DoctorAvailabilty {
+export class DoctorAvailabilty implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  
+  // User & Role Management
   userRole: string | null = null;
-  currentUserId: number = 0;
-  searchDoctorID: number | null = null;
-  startDate = '';
-  endDate = '';
-  availabilities: Availability[] = [];
-  appointments: Appointment[] = [];
-  isLoading = false;
-  message = '';
-  messageType: 'success' | 'error' | 'warning' | '' = '';
-  showAppointments = false;
- 
-  // Add form properties
-  doctorID: number | null = null;
-  date = '';
-  selectedTimeSlots: string[] = [];
-  availableTimeSlots = this.generateTimeSlots();
-  isSubmitting = false;
-  showAddForm = false;
+  currentUserId = 0;
   doctorName = '';
   specialty = '';
- 
-  // Update form properties
-  selectedAvailability: Availability | null = null;
-  showUpdateModal = false;
-  originalDoctorID = 0;
-  originalDate = '';
-  updateDoctorID: number | null = null;
-  updateDate = '';
-  updateSelectedTimeSlots: string[] = [];
 
+  // Forms
+  searchForm: FormGroup;
+  availabilityForm: FormGroup;
 
- 
-  constructor(private availabilityService: AvailabilityService, private http: HttpClient, private router: Router, private authService: AuthService) {
-    console.log('Doctor availability component initialized');
-    this.doctorID = 1;
-    this.searchDoctorID = 1;
-    this.currentUserId = 1;
-    this.initializeUserRole();
-    this.fetchCorrectUserId();
-    
-    setTimeout(() => {
-      this.loadAppointments();
-    }, 1000);
+  // Data Arrays
+  availabilities: Availability[] = [];
+  appointments: Appointment[] = [];
+  timeSlots: TimeSlot[] = [];
+
+  // UI State
+  selectedTabIndex = 0;
+  isLoading = false;
+  isSubmitting = false;
+  isEditing = false;
+  editingAvailability: Availability | null = null;
+  showDeleteModal = false;
+  deleteTarget: Availability | null = null;
+  toastMessage = '';
+  toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  showToast = false;
+  showSuccessModal = false;
+  minDate = new Date().toISOString().split('T')[0];
+
+  constructor(
+    private fb: FormBuilder,
+    private http: HttpClient,
+    private authService: AuthService,
+    private availabilityService: AvailabilityService
+  ) {
+    this.initializeForms();
+    this.generateTimeSlots();
   }
 
-  loadAppointments() {
-    if (this.currentUserId) {
-      this.availabilityService.getAppointmentsByDoctor(this.currentUserId).subscribe({
-        next: (appointments) => {
-          this.appointments = appointments.map(apt => ({
-            ...apt,
-            patientName: `Patient #${apt.patientId}`,
-            status: this.getAppointmentStatus(apt.slot)
-          }));
-        },
-        error: (error) => {
-          console.error('Error loading appointments:', error);
-        }
-      });
-    }
+  ngOnInit() {
+    this.initializeUser();
+    this.loadAppointments();
   }
 
-  getAppointmentStatus(slot: string): string {
-    const now = new Date();
-    const currentTime = now.getHours() * 100 + now.getMinutes();
-    const slotTime = parseInt(slot.replace(':', ''));
-    
-    if (slotTime < currentTime - 100) {
-      return 'Completed';
-    } else if (slotTime <= currentTime + 30) {
-      return 'In Progress';
-    } else {
-      return 'Upcoming';
-    }
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  toggleAppointmentsView() {
-    this.showAppointments = !this.showAppointments;
-    if (this.showAppointments) {
-      this.loadAppointments();
-    }
+  private initializeForms() {
+    this.searchForm = this.fb.group({
+      doctorID: [null, [Validators.min(1)]],
+      startDate: ['', Validators.required],
+      endDate: ['', Validators.required]
+    });
+
+    this.availabilityForm = this.fb.group({
+      doctorID: [{ value: '', disabled: true }, Validators.required],
+      doctorName: [{ value: '', disabled: true }],
+      specialty: [{ value: '', disabled: true }],
+      date: ['', Validators.required]
+    });
   }
 
-  getAppointmentsByDate(date: string): Appointment[] {
-    return this.appointments.filter(apt => apt.date === date);
+  private generateTimeSlots() {
+    this.timeSlots = Array.from({ length: 9 }, (_, i) => {
+      const hour = i + 9;
+      const display = `${this.formatTime(hour)} - ${this.formatTime(hour + 1)}`;
+      return {
+        value: display,
+        display,
+        selected: false
+      };
+    });
   }
 
-  getStatusColor(status: string): string {
-    switch (status) {
-      case 'Completed': return '#4CAF50';
-      case 'In Progress': return '#FF9800';
-      case 'Upcoming': return '#2196F3';
-      default: return '#666';
-    }
+  private formatTime(hour: number): string {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return `${displayHour}:00 ${period}`;
   }
 
-    private fetchCorrectUserId() {
-    // This method is no longer needed since we get the correct ID directly from JWT token
-    // The ID is already set in initializeUserRole() method
-    
-    // Load appointments with the correct doctor ID from token
-    setTimeout(() => {
-      this.loadAppointments();
-    }, 500);
-  }
-
-  private initializeUserRole() {
+  private initializeUser() {
     const token = localStorage.getItem('authToken');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        this.userRole = payload.role || payload.user_type;
-        
-        // Use actual ID from JWT token
-        this.currentUserId = payload.id || payload.userId || 0;
-        this.doctorID = this.currentUserId;
-        this.searchDoctorID = this.currentUserId;
-        this.doctorName = payload.name || payload.sub || 'Doctor';
-        
-        // Load doctor's specialization if user is a doctor
-        if (this.userRole === 'DOCTOR') {
-          this.loadDoctorSpecialization();
-        }
-      } catch (error) {
-        console.error('Error parsing token:', error);
+    if (!token) return;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      this.userRole = payload.role || payload.user_type;
+      this.currentUserId = payload.id || payload.userId || 0;
+      this.doctorName = payload.name || payload.sub || 'Doctor';
+
+      // Update forms with user data
+      this.availabilityForm.patchValue({
+        doctorID: this.currentUserId,
+        doctorName: this.doctorName
+      });
+
+      this.searchForm.patchValue({
+        doctorID: this.currentUserId
+      });
+
+      if (this.userRole === 'DOCTOR') {
+        this.loadDoctorSpecialization();
       }
+    } catch (error) {
+      console.error('Error parsing token:', error);
     }
   }
 
   private loadDoctorSpecialization() {
     const token = this.authService.getToken();
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const userEmail = payload.sub || payload.email;
-        
-        if (userEmail && userEmail.trim() !== '') {
-          this.authService.getUserByEmail(userEmail).subscribe({
+    if (!token) return;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userEmail = payload.sub || payload.email;
+
+      if (userEmail?.trim()) {
+        this.authService.getUserByEmail(userEmail)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
             next: (doctor) => {
-              if (doctor && doctor.specialisation) {
-                this.specialty = doctor.specialisation;
-              } else {
-                this.specialty = 'General Medicine';
-              }
+              this.specialty = doctor?.specialisation || 'General Medicine';
+              this.availabilityForm.patchValue({ specialty: this.specialty });
             },
-            error: (error) => {
+            error: () => {
               this.specialty = 'General Medicine';
+              this.availabilityForm.patchValue({ specialty: this.specialty });
             }
           });
-        } else {
-          this.specialty = 'General Medicine';
-        }
-      } catch (error) {
-        console.error('Error parsing JWT token for specialization:', error);
-        this.specialty = 'General Medicine';
-  }
+      }
+    } catch (error) {
+      this.specialty = 'General Medicine';
+      this.availabilityForm.patchValue({ specialty: this.specialty });
     }
   }
 
+  loadAppointments() {
+    if (!this.currentUserId) return;
 
-
-  canManageAvailability(): boolean {
-    return this.userRole === 'DOCTOR';
+    this.availabilityService.getAppointmentsByDoctor(this.currentUserId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (appointments) => {
+          this.appointments = appointments.map(apt => ({
+            ...apt,
+            patientName: apt.patientName || `Patient ${apt.patientId}`,
+            status: this.getAppointmentStatus(apt.date, apt.slot)
+          }));
+        },
+        error: (error) => {
+          console.error('Error loading appointments:', error);
+          this.showToastNotification('Error loading appointments', 'error');
+        }
+      });
   }
 
-  canViewAllDoctors(): boolean {
-    return this.userRole === 'PATIENT' || this.userRole === 'ADMIN';
+  getAppointmentStatus(appointmentDate: string, slot: string): string {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    // Parse slot time (e.g., "9:00 AM - 10:00 AM" -> 540 minutes)
+    const timeMatch = slot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+    if (!timeMatch) return 'Unknown';
+    
+    let hours = parseInt(timeMatch[1]);
+    const minutes = parseInt(timeMatch[2]);
+    const period = timeMatch[3];
+    
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    const slotTime = hours * 60 + minutes;
+    
+    if (appointmentDate < today) return 'Completed';
+    if (appointmentDate > today) return 'Upcoming';
+    
+    // Same day - check time
+    if (slotTime < currentTime - 60) return 'Completed';
+    if (slotTime <= currentTime + 30) return 'In Progress';
+    return 'Upcoming';
+  }
+
+  getStatusColor(status: string): string {
+    switch (status) {
+      case 'Completed': return 'success';
+      case 'In Progress': return 'warning';
+      case 'Upcoming': return 'primary';
+      default: return 'secondary';
+    }
+  }
+
+  // Permission Checks
+  canManageAvailability(): boolean {
+    return this.userRole === 'DOCTOR';
   }
 
   isCurrentDoctor(doctorId: number): boolean {
     return this.userRole === 'DOCTOR' && this.currentUserId === doctorId;
   }
 
-  bookAppointment(availability: Availability) {
-    if (this.userRole !== 'PATIENT') {
-      this.showMessage('⚠️ Please login as a patient to book appointments', 'warning');
+  // Search Functionality
+  onSearch() {
+    if (this.searchForm.invalid) {
+      this.markFormGroupTouched(this.searchForm);
       return;
     }
+
+    const { doctorID, startDate, endDate } = this.searchForm.value;
     
-    // For now, show a message - this would integrate with appointment booking system
-    this.showMessage(`📅 Appointment booking for Dr. ${availability.doctorID} on ${availability.date} - Feature coming soon!`, 'success');
+    if (new Date(startDate) > new Date(endDate)) {
+      this.showToastNotification('Start date cannot be after end date', 'error');
+      return;
+    }
+
+    this.isLoading = true;
+
+    if (!doctorID && this.userRole === 'PATIENT') {
+      this.searchAllDoctors(startDate, endDate);
+    } else {
+      this.availabilityService.getAvailabilityByDoctor(doctorID, this.formatDateString(startDate), this.formatDateString(endDate))
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (data) => {
+            this.availabilities = data || [];
+            this.showToastNotification(
+              data?.length ? `Found ${data.length} availability record(s)` : 'No availability found',
+              data?.length ? 'success' : 'warning'
+            );
+          },
+          error: () => {
+            this.showToastNotification('Error fetching availability data', 'error');
+          },
+          complete: () => {
+            this.isLoading = false;
+          }
+        });
+    }
   }
 
-  getDoctorInfoByPhone(phone: string) {
-    if (!phone || phone.length !== 10) {
-      this.showMessage('⚠️ Please enter a valid 10-digit phone number', 'warning');
-      return;
-    }
-    this.http.get<any>(`http://localhost:8081/auth/by-phone/${phone}`).subscribe({
-      next: (userData) => {
-        if (userData) {
-          this.showMessage(`👨‍⚕️ Found: Dr. ${userData.name} (ID: ${userData.id})`, 'success');
-          
-          if (userData.user_type === 'DOCTOR') {
-            this.searchDoctorID = userData.id;
-            if (this.userRole === 'DOCTOR') {
-              this.doctorID = userData.id;
-            }
-          }
-        }
-      },
-      error: (error) => {
-        console.error('Error fetching doctor by phone:', error);
-        this.showMessage('❌ Doctor not found with this phone number', 'error');
-      }
-    });
-  }
- 
-  // Search functionality
-  searchAvailability() {
-    // Role-based validation
-    if (this.userRole === 'DOCTOR' && !this.searchDoctorID) {
-      this.showMessage('⚠️ Doctor ID is required for your account', 'error');
-      return;
-    }
-    
-    if (this.searchDoctorID && this.searchDoctorID <= 0) {
-      this.showMessage('⚠️ Doctor ID must be a positive number', 'error');
-      return;
-    }
-    
-    if (!this.startDate) {
-      this.showMessage('⚠️ Please select start date', 'error');
-      return;
-    }
-    if (!this.endDate) {
-      this.showMessage('⚠️ Please select end date', 'error');
-      return;
-    }
-    if (new Date(this.startDate) > new Date(this.endDate)) {
-      this.showMessage('⚠️ Start date cannot be after end date', 'error');
-      return;
-    }
-    if (new Date(this.endDate) < new Date()) {
-      this.showMessage('⚠️ End date cannot be in the past', 'error');
-      return;
-    }
- 
-    this.isLoading = true;
-    
-    // If no doctor ID specified (patient searching all doctors), use a different approach
-    if (!this.searchDoctorID && this.userRole === 'PATIENT') {
-      // For now, we'll search with a default range of doctor IDs
-      // In a real app, you'd have an endpoint to get all availabilities
-      this.searchAllDoctors();
-    } else {
-      this.availabilityService.getAvailabilityByDoctor(this.searchDoctorID!, this.startDate, this.endDate).subscribe({
-        next: (data) => {
-          this.availabilities = data || [];
-          if (data?.length) {
-            this.showMessage(`✅ Found ${data.length} availability record(s)`, 'success');
-          } else {
-            this.showMessage('ℹ️ No availability found for the selected criteria', 'warning');
-          }
-        },
-        error: () => this.showMessage('❌ Error fetching availability data. Please try again.', 'error'),
-        complete: () => this.isLoading = false
-      });
-    }
-  }
-  
-  private searchAllDoctors() {
-    // Search multiple doctor IDs (1-10 as example)
-    const doctorIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  private searchAllDoctors(startDate: string, endDate: string) {
+    const doctorIds = Array.from({ length: 10 }, (_, i) => i + 1);
     const allAvailabilities: Availability[] = [];
     let completedRequests = 0;
-    
+
     doctorIds.forEach(doctorId => {
-      this.availabilityService.getAvailabilityByDoctor(doctorId, this.startDate, this.endDate).subscribe({
-        next: (data) => {
-          if (data && data.length > 0) {
-            allAvailabilities.push(...data);
+      this.availabilityService.getAvailabilityByDoctor(doctorId, this.formatDateString(startDate), this.formatDateString(endDate))
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (data) => {
+            if (data?.length) allAvailabilities.push(...data);
+            this.handleSearchCompletion(++completedRequests, doctorIds.length, allAvailabilities);
+          },
+          error: () => {
+            this.handleSearchCompletion(++completedRequests, doctorIds.length, allAvailabilities);
           }
-          completedRequests++;
-          
-          if (completedRequests === doctorIds.length) {
-            this.availabilities = allAvailabilities;
-            if (allAvailabilities.length > 0) {
-              this.showMessage(`✅ Found ${allAvailabilities.length} availability record(s) from ${new Set(allAvailabilities.map(a => a.doctorID)).size} doctor(s)`, 'success');
-            } else {
-              this.showMessage('ℹ️ No doctors available for the selected dates', 'warning');
-            }
-            this.isLoading = false;
+        });
+    });
+  }
+
+  private handleSearchCompletion(completed: number, total: number, results: Availability[]) {
+    if (completed === total) {
+      this.availabilities = results;
+      this.showToastNotification(
+        results.length ? `Found ${results.length} availability record(s)` : 'No doctors available',
+        results.length ? 'success' : 'warning'
+      );
+      this.isLoading = false;
+    }
+  }
+
+  // Time Slot Management
+  toggleTimeSlot(slot: TimeSlot) {
+    slot.selected = !slot.selected;
+  }
+
+  getSelectedTimeSlots(): string[] {
+    return this.timeSlots.filter(slot => slot.selected).map(slot => slot.value);
+  }
+
+  // CRUD Operations
+  onSubmit() {
+    if (this.availabilityForm.invalid) {
+      this.markFormGroupTouched(this.availabilityForm);
+      return;
+    }
+
+    const selectedSlots = this.getSelectedTimeSlots();
+    if (!selectedSlots.length) {
+      this.showToastNotification('Please select at least one time slot', 'error');
+      return;
+    }
+
+    if (selectedSlots.length > 8) {
+      this.showToastNotification('Maximum 8 time slots allowed per day', 'error');
+      return;
+    }
+
+    const formValue = this.availabilityForm.getRawValue();
+    const availability: Availability = {
+      doctorID: formValue.doctorID,
+      date: this.formatDateString(formValue.date),
+      timeSlots: selectedSlots,
+      doctorName: formValue.doctorName,
+      specialty: formValue.specialty
+    };
+
+    this.isSubmitting = true;
+
+    if (this.isEditing && this.editingAvailability) {
+      this.availabilityService.updateAvailability(availability.doctorID, availability.date, availability)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.showToastNotification('Availability updated successfully', 'success');
+            this.isEditing = false;
+            this.editingAvailability = null;
+            this.resetForm();
+            this.refreshSearch();
+            this.selectedTabIndex = 0;
+          },
+          error: (error) => {
+            const message = error.status === 409 ? 'Schedule conflict detected' : 'Failed to update availability';
+            this.showToastNotification(message, 'error');
+            this.isSubmitting = false;
+          },
+          complete: () => {
+            this.isSubmitting = false;
           }
+        });
+    } else {
+      this.availabilityService.addAvailability(availability)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.showSuccessModal = true;
+            this.resetForm();
+            this.refreshSearch();
+            setTimeout(() => {
+              this.showSuccessModal = false;
+              this.selectedTabIndex = 0;
+            }, 3000);
+          },
+          error: (error) => {
+            const message = error.status === 409 ? 'Schedule already exists for this date' : 'Failed to add availability';
+            this.showToastNotification(message, 'error');
+            this.isSubmitting = false;
+          },
+          complete: () => {
+            this.isSubmitting = false;
+          }
+        });
+    }
+  }
+
+  editAvailability(availability: Availability) {
+    this.isEditing = true;
+    this.editingAvailability = { ...availability };
+    
+    this.selectedTabIndex = 2;
+    
+    this.availabilityForm.patchValue({
+      doctorID: availability.doctorID,
+      date: availability.date,
+      doctorName: availability.doctorName,
+      specialty: availability.specialty
+    });
+    
+    this.timeSlots.forEach(slot => {
+      slot.selected = availability.timeSlots.includes(slot.value);
+    });
+    
+    this.showToastNotification('Editing availability - modify slots and save', 'warning');
+  }
+
+  cancelEdit() {
+    this.isEditing = false;
+    this.editingAvailability = null;
+    this.resetForm();
+    this.showToastNotification('Edit cancelled', 'warning');
+  }
+
+  openDeleteModal(availability: Availability) {
+    this.deleteTarget = availability;
+    this.showDeleteModal = true;
+  }
+
+  closeDeleteModal() {
+    this.showDeleteModal = false;
+    this.deleteTarget = null;
+  }
+
+  confirmDelete() {
+    if (!this.deleteTarget) return;
+
+    this.availabilityService.deleteAvailability(this.deleteTarget.doctorID, this.deleteTarget.date)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.availabilities = this.availabilities.filter(
+            a => !(a.doctorID === this.deleteTarget!.doctorID && a.date === this.deleteTarget!.date)
+          );
+          this.showToastNotification('Availability deleted successfully', 'success');
+          this.closeDeleteModal();
         },
         error: () => {
-          completedRequests++;
-          if (completedRequests === doctorIds.length) {
-            this.availabilities = allAvailabilities;
-            if (allAvailabilities.length > 0) {
-              this.showMessage(`✅ Found ${allAvailabilities.length} availability record(s)`, 'success');
-            } else {
-              this.showMessage('❌ Error searching for available doctors', 'error');
-            }
-            this.isLoading = false;
-          }
+          this.showToastNotification('Failed to delete availability', 'error');
+          this.closeDeleteModal();
         }
       });
+  }
+
+  // Utility Methods
+  private resetForm() {
+    this.availabilityForm.patchValue({ date: '' });
+    this.timeSlots.forEach(slot => slot.selected = false);
+    this.isEditing = false;
+    this.editingAvailability = null;
+  }
+
+  private refreshSearch() {
+    if (this.searchForm.valid) {
+      this.onSearch();
+    }
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup) {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
     });
   }
- 
-  deleteAvailability(doctorID: number, date: string) {
-    if (!confirm('🗑️ Are you sure you want to delete this availability?\n\nThis action cannot be undone.')) return;
-   
-    this.availabilityService.deleteAvailability(doctorID, date).subscribe({
-      next: () => {
-        this.availabilities = this.availabilities.filter(a => !(a.doctorID === doctorID && a.date === date));
-        this.showMessage('✅ Availability deleted successfully', 'success');
-      },
-      error: () => this.showMessage('❌ Failed to delete availability. Please try again.', 'error')
-    });
+
+  private formatDateString(date: Date | string): string {
+    if (typeof date === 'string') return date;
+    return date.toISOString().split('T')[0];
   }
- 
-  // Add form functionality
-  generateTimeSlots() {
-    const slots = [];
-    for (let hour = 9; hour <= 17; hour++) {
-      slots.push(`${this.formatTime(hour, 0)} - ${this.formatTime(hour + 1, 0)}`);
-    }
-    return slots;
-  }
- 
-  private formatTime(hour: number, minute: number): string {
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
-  }
- 
-  toggleTimeSlot(slot: string) {
-    const index = this.selectedTimeSlots.indexOf(slot);
-    index > -1 ? this.selectedTimeSlots.splice(index, 1) : this.selectedTimeSlots.push(slot);
-  }
- 
-  isSlotSelected(slot: string): boolean {
-    return this.selectedTimeSlots.includes(slot);
-  }
- 
-  onSubmit() {
-    // Comprehensive validation
-    if (!this.doctorID) {
-      this.showMessage('⚠️ Please enter Doctor ID', 'error');
-      return;
-    }
-    if (this.doctorID <= 0) {
-      this.showMessage('⚠️ Doctor ID must be a positive number', 'error');
-      return;
-    }
-    if (!this.date) {
-      this.showMessage('⚠️ Please select a date', 'error');
-      return;
-    }
-    if (new Date(this.date) < new Date(new Date().toDateString())) {
-      this.showMessage('⚠️ Date cannot be in the past', 'error');
-      return;
-    }
-    if (!this.selectedTimeSlots.length) {
-      this.showMessage('⚠️ Please select at least one time slot', 'error');
-      return;
-    }
-    if (this.selectedTimeSlots.length > 8) {
-      this.showMessage('⚠️ Maximum 8 time slots allowed per day', 'error');
-      return;
-    }
- 
-    this.isSubmitting = true;
-    this.availabilityService.addAvailability({
-      doctorID: this.doctorID!,
-      date: this.date,
-      timeSlots: this.selectedTimeSlots,
-      doctorName: this.doctorName || `Dr. ${this.doctorID}`,
-      specialty: this.specialty || 'General Medicine'
-    }).subscribe({
-      next: () => {
-        this.showCustomAlert('success', 'Availability Created', `Schedule successfully added for Dr. ${this.doctorName || this.doctorID} on ${this.date}`);
-        this.resetAddForm();
-        this.refreshIfSearchActive();
-      },
-      error: (error) => {
-        if (error.status === 409) {
-          this.showMessage('⚠️ Schedule already exists for this date. Please choose a different date or update the existing availability.', 'warning');
-        } else {
-          this.showMessage('❌ Failed to add availability. Please try again.', 'error');
-        }
-        this.isSubmitting = false;
-      },
-      complete: () => this.isSubmitting = false
-    });
-  }
- 
-  private resetAddForm() {
-    this.doctorID = this.currentUserId;
-    this.date = '';
-    this.selectedTimeSlots = [];
-  }
- 
-  // Update form functionality
-  openUpdateModal(availability: Availability) {
-    this.selectedAvailability = availability;
-    this.originalDoctorID = availability.doctorID;
-    this.originalDate = availability.date;
-    this.updateDoctorID = availability.doctorID;
-    this.updateDate = availability.date;
-    this.updateSelectedTimeSlots = [...availability.timeSlots];
-    this.showUpdateModal = true;
-  }
- 
-  closeUpdateModal() {
-    this.showUpdateModal = false;
-    this.selectedAvailability = null;
-  }
- 
-  toggleUpdateTimeSlot(slot: string) {
-    const index = this.updateSelectedTimeSlots.indexOf(slot);
-    index > -1 ? this.updateSelectedTimeSlots.splice(index, 1) : this.updateSelectedTimeSlots.push(slot);
-  }
- 
-  isUpdateSlotSelected(slot: string): boolean {
-    return this.updateSelectedTimeSlots.includes(slot);
-  }
- 
-  onUpdateSubmit() {
-    // Comprehensive validation
-    if (!this.updateDoctorID) {
-      this.showMessage('⚠️ Please enter Doctor ID', 'error');
-      return;
-    }
-    if (this.updateDoctorID <= 0) {
-      this.showMessage('⚠️ Doctor ID must be a positive number', 'error');
-      return;
-    }
-    if (!this.updateDate) {
-      this.showMessage('⚠️ Please select a date', 'error');
-      return;
-    }
-    if (new Date(this.updateDate) < new Date(new Date().toDateString())) {
-      this.showMessage('⚠️ Date cannot be in the past', 'error');
-      return;
-    }
-    if (!this.updateSelectedTimeSlots.length) {
-      this.showMessage('⚠️ Please select at least one time slot', 'error');
-      return;
-    }
-    if (this.updateSelectedTimeSlots.length > 8) {
-      this.showMessage('⚠️ Maximum 8 time slots allowed per day', 'error');
-      return;
-    }
- 
-    this.isSubmitting = true;
-    this.availabilityService.deleteAvailability(this.originalDoctorID, this.originalDate).subscribe({
-      next: () => {
-        this.availabilityService.addAvailability({
-          doctorID: this.updateDoctorID!,
-          date: this.updateDate,
-          timeSlots: this.updateSelectedTimeSlots
-        }).subscribe({
-          next: () => {
-            this.showMessage(`✅ Availability updated successfully for Dr. ${this.updateDoctorID}!`, 'success');
-            this.closeUpdateModal();
-            this.refreshIfSearchActive();
-          },
-          error: () => this.showMessage('❌ Failed to update availability. Please check if this schedule conflicts with existing data.', 'error'),
-          complete: () => this.isSubmitting = false
-        });
-      },
-      error: () => {
-        this.showMessage('❌ Failed to update availability. Please try again.', 'error');
-        this.isSubmitting = false;
-      }
-    });
-  }
- 
-  private refreshIfSearchActive() {
-    if (this.searchDoctorID && this.startDate && this.endDate) {
-      this.searchAvailability();
-    }
-  }
- 
-  private showMessage(text: string, type: 'success' | 'error' | 'warning') {
-    const cleanText = text.replace(/[🎉✅❌⚠️ℹ️👨⚕️📅🗑️]/g, '').trim();
-    const alertBox = document.createElement('div');
-    alertBox.className = `custom-alert-box alert-${type}`;
-    alertBox.innerHTML = `
-      <div class="alert-icon">${this.getAlertIcon(type)}</div>
-      <div class="alert-content">
-        <div class="alert-title">${this.getAlertTitle(type)}</div>
-        <div class="alert-message">${cleanText}</div>
-      </div>
-      <button class="alert-close-btn" onclick="this.parentElement.remove()">&times;</button>
-    `;
-    
-    document.body.appendChild(alertBox);
-    
+
+
+
+  showToastNotification(message: string, type: 'success' | 'error' | 'warning' | 'info') {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
     setTimeout(() => {
-      if (alertBox.parentElement) {
-        alertBox.classList.add('fade-out');
-        setTimeout(() => alertBox.remove(), 300);
-      }
-    }, type === 'error' ? 6000 : 4000);
+      this.showToast = false;
+    }, 4000);
   }
 
-  showCustomAlert(type: 'success' | 'error' | 'warning', title: string, message: string) {
-    const alertBox = document.createElement('div');
-    alertBox.className = `custom-alert-box alert-${type}`;
-    alertBox.innerHTML = `
-      <div class="alert-icon">${this.getAlertIcon(type)}</div>
-      <div class="alert-content">
-        <div class="alert-title">${title}</div>
-        <div class="alert-message">${message}</div>
-      </div>
-      <button class="alert-close-btn" onclick="this.parentElement.remove()">&times;</button>
-    `;
-    
-    document.body.appendChild(alertBox);
-    
-    setTimeout(() => {
-      if (alertBox.parentElement) {
-        alertBox.classList.add('fade-out');
-        setTimeout(() => alertBox.remove(), 300);
-      }
-    }, type === 'error' ? 6000 : 4000);
+  closeToast() {
+    this.showToast = false;
   }
 
-  private getAlertIcon(type: string): string {
-    const icons = {
-      success: '✅',
-      error: '❌', 
-      warning: '⚠️'
-    };
-    return icons[type as keyof typeof icons] || '✅';
+  closeSuccessModal() {
+    this.showSuccessModal = false;
+    this.selectedTabIndex = 0;
   }
 
-  private getAlertTitle(type: string): string {
-    const titles = {
-      success: 'Success',
-      error: 'Error',
-      warning: 'Warning'
-    };
-    return titles[type as keyof typeof titles] || 'Notification';
+  // Toggle appointments view
+  toggleAppointmentsView() {
+    this.selectedTabIndex = this.selectedTabIndex === 0 ? 1 : 0;
+    if (this.selectedTabIndex === 1) {
+      this.loadAppointments();
+    }
   }
 
+  getAppointmentsByStatus(status: string): Appointment[] {
+    return this.appointments.filter(apt => apt.status === status);
+  }
 
-
-
+  bookAppointment(availability: Availability) {
+    if (this.userRole !== 'PATIENT') {
+      this.showToastNotification('Please login as a patient to book appointments', 'warning');
+      return;
+    }
+    this.showToastNotification(`Appointment booking for Dr. ${availability.doctorName || 'Doctor'} on ${availability.date} - Feature coming soon!`, 'info');
+  }
 }
- 
