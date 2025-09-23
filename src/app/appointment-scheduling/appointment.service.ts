@@ -110,5 +110,14 @@ export class AppointmentService {
       })
     );
   }
+
+  getUserById(userId: number): Observable<UserDTO> {
+    return this.http.get<UserDTO>(`${this.config.authApiUrl}/user/${userId}`).pipe(
+      catchError(error => {
+        console.error('Get user by ID API error:', error);
+        return of({ id: userId, name: `Doctor ${userId}`, email: '' });
+      })
+    );
+  }
 }
  

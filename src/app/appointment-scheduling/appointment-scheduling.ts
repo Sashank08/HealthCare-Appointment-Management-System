@@ -22,6 +22,7 @@ export class AppointmentScheduling {
   selectedUpdateSlot: string = '';
   selectedUpdateStartTime: string = '';
   selectedUpdateEndTime: string = '';
+  selectedCancelSlot: string = '';
   
   // Doctor and Specialisation data
   doctors: UserDTO[] = [];
@@ -67,14 +68,16 @@ export class AppointmentScheduling {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('JWT Payload:', payload); // Debug log
         
         this.userRole = payload.role || payload.user_type;
         
         // Only autofill if user is a patient
         if (this.userRole === 'PATIENT') {
           this.patientId = payload.id || payload.userId || 0;
-          this.patientName = payload.name || '';
+          this.patientName = payload.name || payload.username || '';
           this.patientEmail = payload.sub || payload.email || '';
+          console.log('Patient Info:', { id: this.patientId, name: this.patientName, email: this.patientEmail }); // Debug log
         }
       } catch (error) {
         console.error('Error parsing JWT token for patient info:', error);
@@ -261,10 +264,20 @@ export class AppointmentScheduling {
   }
  
   onSlotChange(selectedSlot: string): void {
+    console.log('Slot changed to:', selectedSlot); // Debug log
     if (selectedSlot && selectedSlot.includes('-')) {
       const [startTime, endTime] = selectedSlot.split('-');
       this.selectedStartTime = this.convertTo24Hour(startTime.trim());
       this.selectedEndTime = this.convertTo24Hour(endTime.trim());
+      console.log('Set times:', { startTime: this.selectedStartTime, endTime: this.selectedEndTime }); // Debug log
+    } else {
+      // Use timeSlots array for proper time mapping
+      const slot = this.timeSlots.find(s => s.value === selectedSlot);
+      if (slot) {
+        this.selectedStartTime = slot.startTime;
+        this.selectedEndTime = slot.endTime;
+        console.log('Set times from timeSlots:', { startTime: this.selectedStartTime, endTime: this.selectedEndTime }); // Debug log
+      }
     }
   }
 
@@ -287,12 +300,33 @@ export class AppointmentScheduling {
       this.selectedUpdateEndTime = slot.endTime;
     }
   }
+
+  onCancelSlotChange(selectedSlot: string): void {
+    const slot = this.timeSlots.find(s => s.value === selectedSlot);
+    if (slot) {
+      this.cancelFormData.startTime = slot.startTime;
+      this.cancelFormData.endTime = slot.endTime;
+    }
+  }
  
   onBookAppointment(formData: any): void {
+    console.log('Book form data:', formData); // Debug log
+    console.log('Selected doctor:', this.selectedDoctor); // Debug log
+    
     // Validate required fields
     if (!formData.patientId || !this.selectedDoctor || !formData.date || !formData.slot ||
         !formData.patientName || !formData.patientEmail ||
         !formData.startTime || !formData.endTime) {
+      console.log('Validation failed:', {
+        patientId: formData.patientId,
+        selectedDoctor: this.selectedDoctor,
+        date: formData.date,
+        slot: formData.slot,
+        patientName: formData.patientName,
+        patientEmail: formData.patientEmail,
+        startTime: formData.startTime,
+        endTime: formData.endTime
+      });
       this.errorMessage = 'Please fill all required fields and select a doctor';
       return;
     }
@@ -320,9 +354,23 @@ export class AppointmentScheduling {
   }
  
   onUpdateAppointment(formData: any): void {
+    console.log('Update form data:', formData); // Debug log
+    console.log('Update form data object:', this.updateFormData); // Debug log
+    
     if (!formData.id || !formData.newDate || !formData.newSlot || !formData.patientName ||
         !formData.patientEmail || !formData.doctorName || !formData.startTime ||
         !formData.endTime || !formData.reason) {
+      console.log('Update validation failed:', {
+        id: formData.id,
+        newDate: formData.newDate,
+        newSlot: formData.newSlot,
+        patientName: formData.patientName,
+        patientEmail: formData.patientEmail,
+        doctorName: formData.doctorName,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        reason: formData.reason
+      });
       this.errorMessage = 'Please fill all required fields for update';
       return;
     }
@@ -344,8 +392,20 @@ export class AppointmentScheduling {
   }
  
   onCancelAppointment(formData: any): void {
+    console.log('Cancel form data:', formData); // Debug log
+    console.log('Cancel form data object:', this.cancelFormData); // Debug log
+    
     if (!formData.patientName || !formData.doctorName || !formData.patientEmail ||
         !formData.date || !formData.startTime || !formData.endTime || !formData.reason) {
+      console.log('Cancel validation failed:', {
+        patientName: formData.patientName,
+        doctorName: formData.doctorName,
+        patientEmail: formData.patientEmail,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        reason: formData.reason
+      });
       this.errorMessage = 'Please fill all required fields for cancellation';
       return;
     }
@@ -473,12 +533,13 @@ export class AppointmentScheduling {
     this.showUpdateForm = false;
     this.clearMessages();
     
-    // Set times from appointment slot
+    // Set times from appointment slot and auto-select the slot
     const slot = this.timeSlots.find(s => s.value === appointment.slot);
     let startTime = '', endTime = '';
     if (slot) {
       startTime = slot.startTime;
       endTime = slot.endTime;
+      this.selectedCancelSlot = appointment.slot; // Auto-select the time slot
     }
     
     // Fetch and populate form data
@@ -504,17 +565,40 @@ export class AppointmentScheduling {
     // Use patient details from token
     const patientName = this.patientName || 'Patient';
     const patientEmail = this.patientEmail || '';
-    const doctorName = `Doctor ${doctorId}`; // You can enhance this with actual doctor data
     
-    if (formType === 'update') {
-      this.updateFormData.patientName = patientName;
-      this.updateFormData.patientEmail = patientEmail;
-      this.updateFormData.doctorName = doctorName;
-    } else {
-      this.cancelFormData.patientName = patientName;
-      this.cancelFormData.patientEmail = patientEmail;
-      this.cancelFormData.doctorName = doctorName;
-    }
+    console.log('Fetching details for form:', formType, { patientName, patientEmail }); // Debug log
+    
+    // Fetch doctor name from backend
+    this.appointmentService.getUserById(doctorId).subscribe({
+      next: (doctor) => {
+        const doctorName = doctor.name || `Doctor ${doctorId}`;
+        
+        if (formType === 'update') {
+          this.updateFormData.patientName = patientName;
+          this.updateFormData.patientEmail = patientEmail;
+          this.updateFormData.doctorName = doctorName;
+          console.log('Update form data set:', this.updateFormData); // Debug log
+        } else {
+          this.cancelFormData.patientName = patientName;
+          this.cancelFormData.patientEmail = patientEmail;
+          this.cancelFormData.doctorName = doctorName;
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching doctor details:', error);
+        const fallbackDoctorName = `Doctor ${doctorId}`;
+        
+        if (formType === 'update') {
+          this.updateFormData.patientName = patientName;
+          this.updateFormData.patientEmail = patientEmail;
+          this.updateFormData.doctorName = fallbackDoctorName;
+        } else {
+          this.cancelFormData.patientName = patientName;
+          this.cancelFormData.patientEmail = patientEmail;
+          this.cancelFormData.doctorName = fallbackDoctorName;
+        }
+      }
+    });
   }
 
   showSuccessPopup(title: string, message: string): void {
