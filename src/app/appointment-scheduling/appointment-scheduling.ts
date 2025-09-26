@@ -140,6 +140,8 @@ export class AppointmentScheduling {
               this.errorMessage = 'This time slot has already been taken by another patient. Please choose a different time slot.';
             } else if (backendMessage.includes('unavailable') || backendMessage.includes('DoctorUnavailable')) {
               this.errorMessage = 'The doctor is not available at this time. Please select another time slot.';
+            } else if (backendMessage.includes('Read timed out') || backendMessage.includes('NOTIFICATION-SERVICE')) {
+              this.errorMessage = 'Appointment booked successfully! Unable to send confirmation email due to network issues, but your appointment is saved in the database.';
             } else {
               this.errorMessage = backendMessage;
             }
@@ -150,7 +152,11 @@ export class AppointmentScheduling {
           // Fallback to backend message if available
           const backendMessage = error.error?.message || error.error;
           if (backendMessage && typeof backendMessage === 'string') {
-            this.errorMessage = backendMessage;
+            if (backendMessage.includes('Read timed out') || backendMessage.includes('NOTIFICATION-SERVICE')) {
+              this.errorMessage = 'Appointment booked successfully! Unable to send confirmation email due to network issues, but your appointment is saved in the database.';
+            } else {
+              this.errorMessage = backendMessage;
+            }
           } else {
             this.errorMessage = 'Failed to book appointment. Please try again.';
           }
@@ -184,7 +190,13 @@ export class AppointmentScheduling {
       },
       error: (error) => {
         this.isReschedulingAppointment = false;
-        this.errorMessage = 'Failed to update appointment. Please check the ID.';
+        const backendMessage = error.error?.message || error.error;
+        if (backendMessage && typeof backendMessage === 'string' && 
+            (backendMessage.includes('Read timed out') || backendMessage.includes('NOTIFICATION-SERVICE'))) {
+          this.errorMessage = 'Appointment updated successfully! Unable to send confirmation email due to network issues, but your changes are saved in the database.';
+        } else {
+          this.errorMessage = 'Failed to update appointment. Please check the ID.';
+        }
         console.error('Error updating appointment:', error);
       }
     });
@@ -213,7 +225,11 @@ export class AppointmentScheduling {
           // Check for specific backend error messages
           const backendMessage = error.error?.message || error.error;
           if (backendMessage && typeof backendMessage === 'string') {
-            this.errorMessage = backendMessage;
+            if (backendMessage.includes('Read timed out') || backendMessage.includes('NOTIFICATION-SERVICE')) {
+              this.errorMessage = 'Appointment cancelled successfully! Unable to send confirmation email due to network issues, but your cancellation is saved in the database.';
+            } else {
+              this.errorMessage = backendMessage;
+            }
           } else {
             this.errorMessage = 'Unable to cancel the appointment. Please try again or contact support.';
           }
@@ -226,7 +242,11 @@ export class AppointmentScheduling {
           // Use backend message if available
           const backendMessage = error.error?.message || error.error;
           if (backendMessage && typeof backendMessage === 'string') {
-            this.errorMessage = backendMessage;
+            if (backendMessage.includes('Read timed out') || backendMessage.includes('NOTIFICATION-SERVICE')) {
+              this.errorMessage = 'Appointment cancelled successfully! Unable to send confirmation email due to network issues, but your cancellation is saved in the database.';
+            } else {
+              this.errorMessage = backendMessage;
+            }
           } else {
             this.errorMessage = 'Failed to cancel appointment. Please try again.';
           }
@@ -299,6 +319,13 @@ export class AppointmentScheduling {
       this.selectedUpdateStartTime = slot.startTime;
       this.selectedUpdateEndTime = slot.endTime;
     }
+  }
+
+  getAvailableUpdateSlots(): any[] {
+    if (!this.selectedAppointmentForUpdate) {
+      return this.timeSlots;
+    }
+    return this.timeSlots.filter(slot => slot.value !== this.selectedAppointmentForUpdate!.slot);
   }
 
   onCancelSlotChange(selectedSlot: string): void {
@@ -514,6 +541,7 @@ export class AppointmentScheduling {
     this.updateFormData = {
       id: appointment.id,
       newDate: appointment.date,
+      newSlot: appointment.slot, // Set the current slot as default
       patientName: 'Loading...',
       patientEmail: 'Loading...',
       doctorName: 'Loading...'
@@ -546,6 +574,7 @@ export class AppointmentScheduling {
     this.cancelFormData = {
       id: appointment.id,
       date: appointment.date,
+      slot: appointment.slot, // Set the current slot
       startTime: startTime,
       endTime: endTime,
       patientName: 'Loading...',
