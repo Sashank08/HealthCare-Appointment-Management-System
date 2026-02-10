@@ -1,0 +1,132 @@
+/* Beautiful Toast Notification Styles */
+.toast-container {
+  z-index: 1060;
+}
+
+.toast {
+  min-width: 350px;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+  animation: slideInRight 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
+  overflow: hidden;
+}
+
+.toast::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.7), rgba(255,255,255,0.3));
+  animation: shimmer 2s infinite;
+}
+
+.toast.bg-success {
+  background: linear-gradient(135deg, #28a745, #20c997) !important;
+  border-left: 5px solid #155724;
+}
+
+.toast.bg-danger {
+  background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+  border-left: 5px solid #721c24;
+}
+
+.toast.bg-warning {
+  background: linear-gradient(135deg, #ffc107, #f39c12) !important;
+  border-left: 5px solid #856404;
+  color: #000 !important;
+}
+
+.toast.bg-info {
+  background: linear-gradient(135deg, #17a2b8, #3498db) !important;
+  border-left: 5px solid #0c5460;
+}
+
+.toast-header {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1rem 1.25rem;
+}
+
+.toast-body {
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.toast .fas {
+  font-size: 1.2em;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.toast .btn-close {
+  background: none;
+  border: none;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.toast .btn-close:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+@keyframes slideInRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Toast exit animation */
+.toast.fade:not(.show) {
+  animation: slideOutRight 0.3s ease-in-out;
+}
+
+@keyframes slideOutRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Warning toast specific styling */
+.toast.bg-warning .toast-header,
+.toast.bg-warning .toast-body {
+  color: #000 !important;
+}
+
+.toast.bg-warning .btn-close {
+  filter: invert(1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .toast {
+    min-width: 300px;
+    margin: 0 1rem;
+  }
+  
+  .toast-container {
+    padding: 1rem;
+  }
+}
